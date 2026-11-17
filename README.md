@@ -35,7 +35,7 @@ Al pulsar **Empezar**, Sosiego te hace 3 o 4 preguntas rápidas y genera una pis
 ### Ambientes
 Escenas realistas generadas por código en la GPU (WebGL, sin vídeos): **Planetario** (Tierra con texturas reales, Saturno y el Sol), **Nubes** (el cielo sigue la hora del día), **Bosque** con niebla y rayos de sol, **Bajo el agua**, **Coche bajo la lluvia**, **Cabaña** con chimenea, **Fogata** y **Tren**. Hay una versión ligera dibujada en 2D (opción «Gráficos realistas») y el diseño **Clásico · origen** (también en la rama `clasico-origen`). Cada ambiente tiene su propio sonido generado por la app (lluvia, fuego, agua, viento con pájaros, tren), opcional y con volumen aparte.
 
-**Vídeos:** Fogata, Cabaña, Tren, Bosque y Coche bajo la lluvia usan bucles de vídeo (`assets/video/`, 720p, ~5,5 MB en total) generados por el autor con Grok Imagine (xAI) y convertidos en bucles sin corte. Si no cargan (sin conexión o con «Gráficos realistas» desactivado), se usa la escena por código.
+**Vídeos:** Planetario, Fogata, Cabaña, Tren, Bosque y Coche bajo la lluvia usan bucles de vídeo (`assets/video/`, 720p, ~5,5 MB en total) generados por el autor con Grok Imagine (xAI) y convertidos en bucles sin corte. Si no cargan (sin conexión o con «Gráficos realistas» desactivado), se usa la escena por código.
 
 **Créditos de imagen:** las texturas de la Tierra (`assets/earth.jpg`, `assets/earth_maps.jpg`, `assets/moon.jpg`: superficie, nubes, luces nocturnas, océanos y Luna) proceden de los ejemplos de [three.js](https://github.com/mrdoob/three.js) (licencia MIT) y están basadas en imágenes *Blue Marble* de la NASA (dominio público).
 
@@ -74,6 +74,10 @@ Consejos: usa auriculares si puedes, volumen bajo (el sonido debe quedar de fond
 ## Nota sobre patentes
 
 Brain.fm indica públicamente que su tecnología está patentada. Antes de distribuir a gran escala, conviene que alguien con conocimientos legales revise si la modulación de amplitud tal como se implementa aquí puede entrar en conflicto con alguna patente vigente en tu país. No es asesoramiento legal.
+
+## Nota sobre patentes (ampliada)
+
+Brain.fm (EE. UU.: familia «Noninvasive neural stimulation through audio», p. ej. US 11,205,414 / 11,532,298 / 12,406,651, y US 11,957,467) y Endel (US 11,275,350, US 12,248,289; solicitudes europeas en trámite) tienen patentes en este campo. Sosiego aplica una modulación de amplitud fija sobre toda la música **sin alinearla con el ritmo** y **no ajusta la modulación con sensores**; el pulso cardiaco solo afecta al tempo. Mantén estas dos decisiones de diseño si contribuyes. Esto no es asesoramiento legal: antes de una difusión amplia o de cualquier uso comercial, consulta a un agente de la propiedad industrial.
 
 ## Licencia
 
