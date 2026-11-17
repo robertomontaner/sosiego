@@ -16,7 +16,7 @@ Al pulsar **Empezar**, Sosiego te hace 3 o 4 preguntas rápidas y genera una pis
 4. **¿Cuánta intensidad?** (solo en Enfoque) Suave, media o alta. Controla la profundidad de la modulación.
 
 ### Variedad
-- Cada pista se **genera al momento** a partir de una semilla: tonalidad, escala, progresión de acordes, tempo, instrumentos, patrón de arpegio, bajo y paisaje natural. Nunca suena igual dos veces y cada una tiene nombre propio.
+- Cada pista se **genera al momento** a partir de una semilla: tonalidad, escala, progresión de acordes, tempo, instrumentos, patrón de arpegio, bajo y paisaje natural. Nunca suena igual dos veces y cada una tiene nombre propio. Sosiego recuerda las últimas 8 pistas y evita repetir una parecida (tonalidad, escala, acordes, timbre, patrón).
 - La pista **evoluciona por secciones**. En Enfoque los cambios son mínimos y lentos (acordes y brillo, cada 3–5 min) para no distraer: la variedad está entre pistas, no dentro. En Calma y Dormir hay algo más de movimiento.
 - **⟳ Otra pista** genera una nueva con las mismas respuestas. **👍 / 👎** ajustan qué tipo de sonido te propone «Sorpréndeme» (se guarda solo en tu dispositivo).
 

@@ -202,8 +202,8 @@ const MODE_LABEL = { focus:'Enfoque', calm:'Calma', sleep:'Dormir' };
 const PALETTES = ['calido','cristal','naturaleza','electronico'];
 
 /* ---------- Estado ---------- */
-const PERSIST = ['volume','minutes','binaural','timeAdapt','hrManual','profile','likes','spatial','task'];
-const S = { spatial:true, task:'', volume:.7, minutes:45, binaural:false, timeAdapt:true, hrManual:null, hrLive:null, profile:null,
+const PERSIST = ['volume','minutes','binaural','timeAdapt','hrManual','profile','likes','spatial','task','recent'];
+const S = { recent:[], spatial:true, task:'', volume:.7, minutes:45, binaural:false, timeAdapt:true, hrManual:null, hrLive:null, profile:null,
             likes:{ calido:0, cristal:0, naturaleza:0, electronico:0 },
             amRate:16, amDepth:.5, noise:'brown', noiseVol:.2, music:.85, natureVol:.8, cutoff:1800 };
 try { const sv = JSON.parse(localStorage.getItem('sosiego2') || '{}'); PERSIST.forEach(k => { if (k in sv) S[k] = sv[k]; }); } catch(e){}
@@ -218,6 +218,19 @@ const N2 = ['cobre','niebla','marzo','sal','ámbar','cedro','luna','seda','pizar
 function weightedPalette(r){
   const w = PALETTES.map(p => Math.exp(clamp(S.likes[p] || 0, -4, 6) * .45)), tot = w.reduce((a, b) => a + b, 0);
   let x = r() * tot; for (let i = 0; i < w.length; i++){ x -= w[i]; if (x <= 0) return PALETTES[i]; } return PALETTES[0];
+}
+// Variedad entre sesiones: recuerda las últimas pistas y evita repetir una parecida
+const sig = T => [T.root % 12, SCALE_KEY(T.scale), T.prog.join(''), T.padTimbre, T.arpPat, T.melVoice, T.nature || '-'];
+const SCALE_KEY = sc => Object.keys(SCALES).find(k => SCALES[k] === sc);
+function freshTrack(p){
+  let best = null, bestScore = 99;
+  for (let i = 0; i < 25; i++){
+    const T = makeTrack(p, (Math.random()*2**32) >>> 0), g = sig(T);
+    const score = Math.max(0, ...(S.recent || []).map(r => r.filter((x, j) => x === g[j]).length));
+    if (score < bestScore){ best = T; bestScore = score; } if (score <= 2) break;
+  }
+  S.recent = [sig(best), ...(S.recent || [])].slice(0, 8); save();
+  return best;
 }
 function makeTrack(p, seed){
   const r = rngFrom(seed), pick = a => choose(a, r), mode = modeOf(p.activity);
@@ -455,7 +468,7 @@ function startTrack(p, seed){
   const t = ctx.currentTime;
   if (cur){ const old = cur; [old.music, old.nat].forEach(g => { g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(g.gain.value, t); g.gain.linearRampToValueAtTime(0, t + 4); });
     setTimeout(() => { old.nodes.forEach(n => { try { n.stop(); } catch(e){} }); try { old.music.disconnect(); old.nat.disconnect(); } catch(e){} }, 5000); }
-  T = makeTrack(p, seed); sec = null; clock = {}; trackStart = Date.now();
+  T = freshTrack(p); sec = null; clock = {}; trackStart = Date.now();
   const music = ctx.createGain(), nat = ctx.createGain(); music.connect(musicIn); nat.connect(natureOut);
   music.gain.setValueAtTime(0, t); music.gain.linearRampToValueAtTime(1, t + 4); nat.gain.setValueAtTime(0, t); nat.gain.linearRampToValueAtTime(1, t + 5);
   cur = { music, nat, nodes: T.nature ? startNature(T.nature, nat) : [] };
