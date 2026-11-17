@@ -32,6 +32,9 @@ Al pulsar **Empezar**, Sosiego te hace 3 o 4 preguntas rápidas y genera una pis
 - Duraciones fijas con fundido final, o sin límite. Campo opcional para escribir en qué te vas a centrar.
 - **Pulso cardiaco (opcional)**: entrada manual, por toques o pulsómetro Bluetooth. En Calma y Dormir el tempo lo sigue y lo baja poco a poco.
 
+### Ambientes
+Escenas animadas dibujadas en código (sin imágenes): **Planetario** (Sol, Tierra y Saturno flotando), **Bajo el agua**, **Cabaña** con chimenea, **Fogata** en el campo, **Tren** (paisaje por la ventana) y **Clásico · origen** (el diseño original, también guardado en la rama `clasico-origen`). Los ambientes con fuego, agua o tren tienen su propio sonido opcional, con volumen aparte.
+
 ## Lo que dice la ciencia (y lo que no)
 
 - **Modulación de amplitud en música**: Woods et al. (2024), *Communications Biology*, doi:10.1038/s42003-024-07026-3. La música con modulaciones rápidas apoyó la atención sostenida y activó redes atencionales, con diferencias según el nivel de dificultad atencional. **Se hizo en colaboración con Brain.fm** y el efecto no apareció igual en todas las condiciones. Prometedor, no concluyente.
