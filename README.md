@@ -33,7 +33,9 @@ Al pulsar **Empezar**, Sosiego te hace 3 o 4 preguntas rápidas y genera una pis
 - **Pulso cardiaco (opcional)**: entrada manual, por toques o pulsómetro Bluetooth. En Calma y Dormir el tempo lo sigue y lo baja poco a poco.
 
 ### Ambientes
-Escenas animadas dibujadas en código (sin imágenes): **Planetario** (Sol, Tierra y Saturno flotando), **Bajo el agua**, **Cabaña** con chimenea, **Fogata** en el campo, **Tren** (paisaje por la ventana) y **Clásico · origen** (el diseño original, también guardado en la rama `clasico-origen`). Los ambientes con fuego, agua o tren tienen su propio sonido opcional, con volumen aparte.
+Escenas realistas generadas por código en la GPU (WebGL, sin vídeos): **Planetario** (Tierra con texturas reales, Saturno y el Sol), **Nubes** (el cielo sigue la hora del día), **Bosque** con niebla y rayos de sol, **Bajo el agua**, **Coche bajo la lluvia**, **Cabaña** con chimenea, **Fogata** y **Tren**. Hay una versión ligera dibujada en 2D (opción «Gráficos realistas») y el diseño **Clásico · origen** (también en la rama `clasico-origen`). Cada ambiente tiene su propio sonido generado por la app (lluvia, fuego, agua, viento con pájaros, tren), opcional y con volumen aparte.
+
+**Créditos de imagen:** las texturas de la Tierra (`assets/earth.jpg`, `assets/clouds.jpg`) proceden de los ejemplos de [three.js](https://github.com/mrdoob/three.js) (licencia MIT) y están basadas en imágenes *Blue Marble* de la NASA (dominio público).
 
 ## Lo que dice la ciencia (y lo que no)
 

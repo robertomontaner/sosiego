@@ -100,7 +100,8 @@ body[data-theme=agua]{--a:#72e6ff;--b:#3f9dff}
 body[data-theme=cabana]{--a:#ffc47e;--b:#ff8a5c}
 body[data-theme=fogata]{--a:#ffb46b;--b:#ff6b4a}
 body[data-theme=tren]{--a:#ffd08a;--b:#e48ab0}
-#scene{position:fixed;inset:0;width:100vw;height:100vh;z-index:-1;display:block}
+#scene,#gl{position:fixed;inset:0;width:100vw;height:100vh;z-index:-1;display:block}
+#gl{display:none}
 .glass{background:rgba(16,20,34,.42);-webkit-backdrop-filter:blur(22px) saturate(150%);backdrop-filter:blur(22px) saturate(150%);border:1px solid rgba(255,255,255,.12);box-shadow:0 12px 40px rgba(0,0,0,.28)}
 .topbar{position:fixed;top:12px;left:50%;transform:translateX(-50%);width:min(680px,calc(100% - 24px));display:flex;align-items:center;justify-content:space-between;padding:7px 8px 7px 18px;border-radius:999px;z-index:5}
 .brand{font-weight:650;letter-spacing:-.01em;font-size:17px}
@@ -161,11 +162,13 @@ body:not([data-theme=clasico]) .track{order:1;margin-top:8px}
 body:not([data-theme=clasico]) .meta{order:1}
 body:not([data-theme=clasico]) #whyLink{order:3;margin-top:8px}
 body:not([data-theme=clasico]) .dock{margin-top:0}
+@media (max-width:520px){.theme-grid{grid-template-columns:1fr 1fr}}
 @media (max-width:420px){.dock-row{gap:8px}.ib{width:42px;height:42px}.playbtn{width:62px;height:62px}.pill span{display:none}.pill{padding:0 10px}}
 </style>
 </head>
 <body>
 <canvas id="scene" aria-hidden="true"></canvas>
+<canvas id="gl" aria-hidden="true"></canvas>
 <nav class="topbar glass">
   <span class="brand">Sosiego</span>
   <div class="tb-actions">
@@ -266,7 +269,8 @@ body:not([data-theme=clasico]) .dock{margin-top:0}
       <h2 id="themesTitle">Ambiente</h2><button class="link" id="themesClose" aria-label="Cerrar">✕</button>
     </div>
     <div class="theme-grid" id="themeGrid"></div>
-    <label class="check"><input type="checkbox" id="themeSound"><span>Sonido del ambiente <span class="note">(chimenea, fogata, agua, tren)</span></span></label>
+    <label class="check"><input type="checkbox" id="realistic"><span>Gráficos realistas <span class="note">(desactívalo si el móvil se calienta o gasta batería)</span></span></label>
+    <label class="check"><input type="checkbox" id="themeSound"><span>Sonido del ambiente <span class="note">(lluvia, fuego, agua, viento, tren…)</span></span></label>
     <div class="field" style="margin:4px 0 0"><label for="themeVol">Volumen del ambiente</label><input type="range" id="themeVol" min="0" max="1" step=".01"><output id="themeVolO"></output></div>
   </div>
 </div>
@@ -316,12 +320,493 @@ body:not([data-theme=clasico]) .dock{margin-top:0}
 <audio id="keep" playsinline hidden></audio>
 
 <script>
+/* ---------- Escenas realistas por código (WebGL) ---------- */
+const GLScenes = (() => {
+  const cv = document.getElementById('gl');
+  let gl = null;
+  try { gl = cv.getContext('webgl', { antialias:false, alpha:false, powerPreference:'low-power' }) || cv.getContext('experimental-webgl'); } catch(e){}
+  if (!gl) return null;
+
+  const COMMON = `
+precision highp float;
+uniform vec2 uRes; uniform float uTime, uLevel, uBreath, uHour;
+uniform sampler2D uTex0, uTex1;
+#define PI 3.14159265
+float h11(float p){ p = fract(p*.1031); p *= p + 33.33; p *= p + p; return fract(p); }
+float h21(vec2 p){ vec3 p3 = fract(vec3(p.xyx)*.1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y)*p3.z); }
+vec2 h22(vec2 p){ vec3 p3 = fract(vec3(p.xyx)*vec3(.1031,.1030,.0973)); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.xx + p3.yz)*p3.zy); }
+float noise(vec2 p){ vec2 i = floor(p), f = fract(p); vec2 u = f*f*(3. - 2.*f);
+  return mix(mix(h21(i), h21(i + vec2(1,0)), u.x), mix(h21(i + vec2(0,1)), h21(i + vec2(1,1)), u.x), u.y); }
+float fbm(vec2 p){ float v = 0., a = .5; mat2 m = mat2(1.6, 1.2, -1.2, 1.6); for (int i = 0; i < 6; i++){ v += a*noise(p); p = m*p; a *= .5; } return v; }
+float fbm3(vec2 p){ float v = 0., a = .5; mat2 m = mat2(1.6, 1.2, -1.2, 1.6); for (int i = 0; i < 3; i++){ v += a*noise(p); p = m*p; a *= .5; } return v; }
+vec3 aces(vec3 x){ return clamp((x*(2.51*x + .03))/(x*(2.43*x + .59) + .14), 0., 1.); }
+float stars(vec2 uv, float t, float dens){ vec2 g = uv*dens; vec2 id = floor(g), f = fract(g) - .5; vec2 r = h22(id);
+  float s = smoothstep(.06*r.y + .015, 0., length(f - (r - .5)*.7)) * step(.82, r.x);
+  return s * (.55 + .45*sin(t*(1. + 3.*r.y) + r.x*40.)); }
+vec3 fireCol(float k){ return vec3(1.5, .55, .12)*k*k + vec3(1.2, .95, .5)*pow(k, 6.)*1.2; }
+float flame(vec2 q, float t){ // q: 0 en la base, y hacia arriba, ~[-.5,.5] x [0,1.4]
+  float n = fbm(vec2(q.x*3.2, q.y*2.4 - t*2.6)) * .9 + fbm(vec2(q.x*7., q.y*5. - t*4.))*.25;
+  float w = .32*(1. - q.y*.6);
+  float shape = 1. - length(vec2(q.x/max(w, .02), (q.y - .25)*1.1));
+  return clamp(shape*1.3 - n*.9 + .35 - q.y*.35, 0., 1.);
+}
+`;
+
+  const SCENES = {
+/* ---- Coche bajo la lluvia ---- */
+coche: `
+vec3 city(vec2 uv, float t){
+  vec3 col = mix(vec3(.012,.016,.03), vec3(.04,.035,.07), smoothstep(-.5, .5, uv.y));
+  col += vec3(.45,.22,.08)*smoothstep(.15, -.5, uv.y)*.35;
+  for (int i = 0; i < 44; i++){
+    float fi = float(i); vec2 r = h22(vec2(fi, 7.3));
+    float mov = step(.55, h11(fi*3.1)), sp = (.03 + .06*h11(fi*1.3))*(h11(fi*9.) > .5 ? 1. : -1.);
+    vec2 p = vec2(r.x*2.6 - 1.3, r.y*.6 - .32);
+    if (mov > .5){ p.x = mod(r.x*2.6 + t*sp, 2.6) - 1.3; p.y = -.08 - r.y*.18; }
+    float s = .02 + .055*h11(fi*1.7);
+    float hc = h11(fi*5.);
+    vec3 c = hc < .33 ? vec3(1., .22, .12) : hc < .66 ? vec3(1., .72, .38) : hc < .85 ? vec3(.55, .78, 1.) : vec3(.9, .4, 1.);
+    float d = length(uv - p);
+    float b = smoothstep(s, s*.8, d)*(.6 + .4*smoothstep(s*.4, s, d));
+    col += c*b*(.32 + .12*sin(t*1.7 + fi));
+  }
+  return col;
+}
+vec3 staticDrops(vec2 uv, float t, float sc, float seed){
+  vec2 g = uv*sc; vec2 id = floor(g); vec2 f = fract(g) - .5;
+  vec2 r = h22(id + seed); float life = fract(t*.03 + r.x*7.);
+  float on = step(.62, r.y)*smoothstep(1., .85, life);
+  vec2 p = (h22(id*1.7 + seed) - .5)*.6; float rad = .1 + .17*h21(id + seed*2.);
+  vec2 d = f - p; d.y *= 1.15; float l = length(d);
+  float m = smoothstep(rad, rad*.82, l)*on;
+  return vec3(d/rad*m, m);
+}
+vec3 runDrops(vec2 uv, float t){
+  float cols = 7.; float gx = uv.x*cols; float cx = floor(gx); float fx = fract(gx) - .5;
+  float r = h11(cx*13.7 + 2.); float sp = .08 + .14*r;
+  float head = .65 - fract(t*sp + r)*1.5;
+  float wig = sin(uv.y*14. + r*6.2)*.12 + sin(uv.y*31. + r*3.)*.04;
+  float x = fx - wig*.6 - (r - .5)*.4;
+  float dy = uv.y - head;
+  vec2 d = vec2(x, dy*cols*.55);
+  float m = smoothstep(.26, .16, length(d*vec2(1., .85)));
+  float trail = smoothstep(.07, .02, abs(x))*step(0., dy)*smoothstep(.55, 0., dy);
+  float beads = smoothstep(.35, .1, length(vec2(x*1.6, fract(dy*18.) - .5)))*trail;
+  float mm = max(m, beads*.8);
+  return vec3(vec2(x*2.2, dy*1.2)*mm, mm);
+}
+void main(){
+  float asp = uRes.x/uRes.y;
+  vec2 uv = (gl_FragCoord.xy - .5*uRes)/uRes.y; float t = uTime;
+  vec3 a = staticDrops(uv, t, 13., 1.), b = staticDrops(uv*1.3 + 3.1, t, 24., 5.), rd = runDrops(uv, t);
+  vec2 n = a.xy*.7 + b.xy*.45 + rd.xy; float m = clamp(max(max(a.z, b.z), rd.z), 0., 1.);
+  vec3 fog = city(uv*.98, t)*.5 + vec3(.012, .016, .024);
+  vec3 refr = city(-(uv - n*.11)*.75, t)*1.35 + fog*.7 + .02;
+  float rim = smoothstep(.55, 1., length(n))*m;
+  vec3 col = mix(fog, refr, m);
+  col *= 1. - rim*.22;
+  col += pow(max(0., dot(normalize(vec3(n, 1.)), normalize(vec3(-.4, .7, 1.)))), 24.)*m*.5;
+  float pillar = smoothstep(.0, .015, uv.x + asp*.5 - .06 - (uv.y + .5)*.14);
+  float dash = smoothstep(-.5 + .13, -.5 + .145, uv.y + .015*sin(uv.x*2.5));
+  float inside = (1. - pillar) + (1. - dash);
+  vec3 interior = vec3(.012, .013, .017) + vec3(.35, .2, .1)*.04*smoothstep(-.5, -.37, uv.y);
+  col = mix(col, interior, clamp(inside, 0., 1.));
+  col += vec3(.5, .32, .18)*.06*smoothstep(.012, 0., abs(uv.y + .5 - .135 - .015*sin(uv.x*2.5)))*pillar;
+  col *= 1. - .45*dot(uv/vec2(asp*.7, .8), uv/vec2(asp*.7, .8));
+  gl_FragColor = vec4(aces(col*1.4), 1.);
+}`,
+
+/* ---- Nubes pasando (el cielo sigue la hora del día) ---- */
+nubes: `
+void main(){
+  vec2 uv = gl_FragCoord.xy/uRes.y; float asp = uRes.x/uRes.y; float t = uTime;
+  float hr = uHour;
+  float day = smoothstep(6., 9., hr)*smoothstep(21., 18., hr);
+  float gold = max(smoothstep(5., 7.5, hr)*smoothstep(10., 7.5, hr), smoothstep(16.5, 19., hr)*smoothstep(21.5, 19., hr));
+  vec3 zen = mix(vec3(.02, .03, .08), vec3(.18, .42, .82), day);
+  vec3 hor = mix(vec3(.06, .07, .14), vec3(.72, .84, .96), day);
+  hor = mix(hor, vec3(1., .62, .38), gold*.85); zen = mix(zen, vec3(.32, .36, .62), gold*.5);
+  float y = uv.y;
+  vec3 sky = mix(hor, zen, smoothstep(0., 1., y));
+  vec2 sun = vec2(asp*.78, .62);
+  float sd = length(uv - sun);
+  vec3 sunCol = mix(vec3(1., .95, .85), vec3(1., .6, .3), gold);
+  sky += sunCol*(.0025/(sd*sd + .002))*(.25 + .75*day + gold)*.12 + sunCol*exp(-sd*4.)*.25*(day + gold);
+  vec3 col = sky;
+  for (int L = 0; L < 3; L++){
+    float fl = float(L);
+    float sc = 1.6 + fl*1.1, spd = .012 + fl*.012;
+    vec2 p = uv*sc + vec2(t*spd + fl*7.3, fl*3.1);
+    vec2 w = vec2(fbm3(p*.8 + t*.01), fbm3(p*.8 - t*.008 + 5.));
+    float d = fbm(p + w*.6);
+    float cover = .5 - fl*.04 + .05*sin(t*.02 + fl);
+    float c = smoothstep(cover, cover + .28, d);
+    vec2 toSun = normalize(sun - uv)*.06;
+    float d2 = fbm(p + w*.6 + toSun*sc);
+    float lit = clamp(.55 + (d - d2)*3.2, 0., 1.);
+    vec3 dark = mix(vec3(.05, .06, .1), mix(vec3(.45, .5, .62), vec3(.55, .42, .5), gold), max(day, gold*.8));
+    vec3 light = mix(vec3(.18, .2, .3), mix(vec3(1., .99, .96), vec3(1., .78, .58), gold), max(day, gold));
+    vec3 cc = mix(dark, light, lit);
+    cc += sunCol*pow(1. - c, 3.)*c*1.2*exp(-sd*2.5)*(day + gold); // borde iluminado
+    col = mix(col, cc, c*(.75 + fl*.08));
+  }
+  col += stars(uv, t, 120.)*(1. - day)*(1. - gold)*.8;
+  gl_FragColor = vec4(aces(col*1.05), 1.);
+}`,
+
+/* ---- Bajo el agua ---- */
+agua: `
+float caustic(vec2 p, float t){
+  float c = 0.; vec2 q = p;
+  for (int i = 0; i < 3; i++){ float fi = float(i); q += vec2(sin(q.y*1.3 + t*.7 + fi), cos(q.x*1.1 - t*.6 + fi*2.))*.6; c += abs(sin(q.x) + cos(q.y)); }
+  c /= 3.; return pow(clamp(1. - c*.6, 0., 1.), 3.);
+}
+void main(){
+  vec2 uv = gl_FragCoord.xy/uRes.y; float asp = uRes.x/uRes.y; float t = uTime;
+  float y = gl_FragCoord.y/uRes.y;
+  vec3 deep = vec3(.004, .03, .06), mid = vec3(.02, .17, .27), top = vec3(.12, .48, .6);
+  vec3 col = mix(deep, mid, smoothstep(0., .7, y)); col = mix(col, top, smoothstep(.6, 1., y));
+  // superficie
+  float surf = fbm(vec2(uv.x*3. + t*.15, t*.2))*.03;
+  col += vec3(.5, .8, .9)*smoothstep(.93 + surf, 1., y)*.6;
+  // rayos de luz
+  float k = .8 + uLevel*.8 + uBreath*.25;
+  float ang = uv.x + (1. - y)*.35;
+  float rays = 0.;
+  for (int i = 0; i < 3; i++){ float fi = float(i); rays += pow(max(0., sin(ang*(7. + fi*5.) + t*(.1 + fi*.07) + fbm3(vec2(ang*3., t*.05 + fi))*3.)), 6.); }
+  col += vec3(.35, .7, .8)*rays*.11*smoothstep(.1, 1., y)*k;
+  // fondo con cáusticas
+  float floorY = .22 + fbm3(vec2(uv.x*2., 1.))*.08;
+  float fm = smoothstep(floorY + .02, floorY - .05, y);
+  vec3 sand = vec3(.05, .16, .17) + caustic(vec2(uv.x*3., y*7.)*1.5, t*.5)*vec3(.25, .55, .55)*.6;
+  col = mix(col, sand*(.6 + .4*fbm(uv*12.)), fm*.85);
+  // algas
+  for (int i = 0; i < 11; i++){ float fi = float(i); float x0 = (fi + .5)/11.*asp + (h11(fi) - .5)*.15; float hgt = .2 + .3*h11(fi*3.);
+    float k = clamp(y/hgt, 0., 1.);
+    float sway = (sin(t*.5 + y*7. + fi) + .5*sin(t*.9 + y*13. + fi*2.))*.035*k;
+    float d = abs(uv.x - x0 - sway) - (.014 - .01*k)*(.7 + .5*h11(fi*9.));
+    float a = smoothstep(.003, -.002, d)*step(y, hgt);
+    vec3 kc = mix(vec3(.01, .06, .05), vec3(.03, .14, .1), k*.6 + .2*sin(y*40. + fi));
+    col = mix(col, kc, a*.92); }
+  // partículas
+  vec2 g = vec2(uv.x*40., uv.y*40. + t*.6); vec2 id = floor(g); vec2 f = fract(g) - .5; vec2 r = h22(id);
+  col += vec3(.6, .85, .9)*smoothstep(.06, 0., length(f - (r - .5)*.6))*step(.85, r.x)*.25;
+  // burbujas
+  for (int i = 0; i < 14; i++){ float fi = float(i); float bx = h11(fi*7.1)*asp + sin(t*1.3 + fi)*.012;
+    float by = fract(t*(.05 + .05*h11(fi*2.)) + h11(fi*3.))*1.2 - .1; float br = .006 + .01*h11(fi*5.);
+    float d = length(uv - vec2(bx, by));
+    col += vec3(.7, .9, 1.)*(smoothstep(br, br*.8, d) - smoothstep(br*.8, br*.55, d))*.5 + vec3(1.)*smoothstep(br*.3, 0., length(uv - vec2(bx - br*.35, by + br*.35)))*.5; }
+  col *= 1. - .35*pow(length((gl_FragCoord.xy/uRes - .5)*1.3), 2.);
+  gl_FragColor = vec4(aces(col*1.3), 1.);
+}`,
+
+/* ---- Bosque con niebla y rayos de sol ---- */
+bosque: `
+void main(){
+  vec2 uv = gl_FragCoord.xy/uRes.y; float asp = uRes.x/uRes.y; float t = uTime; float y = uv.y;
+  vec3 fogC = mix(vec3(.62, .7, .55), vec3(.95, .88, .66), smoothstep(.2, 1., y));
+  vec3 col = fogC;
+  vec2 sun = vec2(asp*.72, 1.15);
+  vec2 dir = normalize(uv - sun);
+  float rays = fbm3(vec2(atan(dir.x, -dir.y)*14., t*.04));
+  float rayMask = smoothstep(.45, .8, rays);
+  for (int L = 0; L < 6; L++){
+    float fl = float(L), z = 1. - fl/6.; // 1 lejos -> 0 cerca
+    float cells = 3. + (1. - z)*1.5 + fl*2.2;
+    float px = uv.x*cells + fl*13.7 + t*.003*(6. - fl);
+    float id = floor(px); float fx = fract(px) - .5;
+    float r = h11(id + fl*31.);
+    float w = (.05 + .1*h11(id*2.3 + fl))*(.6 + (1. - z)*.9);
+    float ground = .12 + z*.2 + fbm3(vec2(uv.x*2. + fl, fl))*.05;
+    float trunk = step(.25, r)*smoothstep(w, w*.85, abs(fx - (r - .5)*.4 + sin(y*3. + id)*.01));
+    float bark = .7 + .3*fbm(vec2(fx*20., y*6. + id));
+    float tree = max(trunk, 0.);
+    float near = 1. - z;
+    vec3 tc = mix(fogC, vec3(.05, .06, .04)*bark, pow(near, 1.2)*.85 + .1);
+    col = mix(col, tc, tree);
+    float gm = smoothstep(ground + .01, ground - .01, y);
+    vec3 gc = mix(fogC, vec3(.07, .1, .05)*(.7 + .5*fbm(uv*30. + fl)), pow(near, 1.1)*.8 + .1);
+    col = mix(col, gc, gm);
+  }
+  float canopy = smoothstep(.62, .95, y + fbm(vec2(uv.x*4., y*3. + t*.01))*.25);
+  col = mix(col, vec3(.04, .06, .03), canopy*.85);
+  col += vec3(1., .9, .65)*rayMask*.22*smoothstep(1.1, .0, length(uv - sun)*.7)*(1. - canopy*.6)*(.85 + uLevel*.5);
+  vec2 g = vec2(uv.x*30., uv.y*30. - t*.25); vec2 idd = floor(g); vec2 f = fract(g) - .5; vec2 rr = h22(idd);
+  col += vec3(1., .95, .75)*smoothstep(.07, 0., length(f - (rr - .5)*.6))*step(.9, rr.x)*.35*rayMask;
+  col *= 1. - .4*pow(length((gl_FragCoord.xy/uRes - .5)*1.3), 2.);
+  gl_FragColor = vec4(aces(col*1.05), 1.);
+}`,
+
+/* ---- Fogata en el campo ---- */
+fogata: `
+void main(){
+  vec2 uv = gl_FragCoord.xy/uRes.y; float asp = uRes.x/uRes.y; float t = uTime; float y = uv.y;
+  vec3 col = mix(vec3(.05, .04, .09), vec3(.006, .01, .03), smoothstep(.2, 1., y));
+  vec2 mw = vec2(uv.x - asp*.5, y - .7); float band = exp(-pow((mw.y + mw.x*.45)*3.2, 2.));
+  col += vec3(.5, .45, .6)*band*fbm(uv*3. + 2.)*.18;
+  col += stars(uv, t, 140.)*(.6 + band)*.9 + stars(uv + 3.3, t*.7, 60.)*.6;
+  float fx = asp*.5, fb = .37;
+  float hills = .5 + fbm3(vec2(uv.x*1.5, 2.))*.12;
+  float treeline = hills + .05*step(.5, fract(uv.x*14.))*0. + pow(fbm(vec2(uv.x*22., 1.)), 2.)*.18;
+  col = mix(col, vec3(.012, .012, .025), smoothstep(treeline + .004, treeline - .004, y));
+  float ground = .42 + fbm3(vec2(uv.x*3., 5.))*.03;
+  float gm = smoothstep(ground + .005, ground - .005, y);
+  vec3 gcol = vec3(.015, .012, .02);
+  float glowD = length((uv - vec2(fx, fb))*vec2(1., 2.4));
+  float f = .85 + .15*sin(t*7.3)*sin(t*3.1 + 1.) + uLevel*.3;
+  gcol += vec3(.9, .4, .12)*exp(-glowD*4.5)*.55*f;
+  col = mix(col, gcol, gm);
+  col += vec3(1., .45, .15)*exp(-length(uv - vec2(fx, fb + .06))*5.)*.12*f;
+  // troncos
+  vec2 q0 = uv - vec2(fx, fb - .005);
+  float lg = smoothstep(.012, .008, abs(q0.y - q0.x*.32))*step(abs(q0.x), .1) + smoothstep(.012, .008, abs(q0.y + q0.x*.32))*step(abs(q0.x), .1);
+  col = mix(col, vec3(.06, .03, .02) + vec3(.6, .2, .05)*.25*f, clamp(lg, 0., 1.));
+  // fuego
+  float sz = .2;
+  vec2 q = (uv - vec2(fx, fb))/sz;
+  float fl = flame(q, t);
+  col += fireCol(fl)*1.1;
+  // chispas
+  for (int i = 0; i < 18; i++){ float fi = float(i); float ph = fract(t*(.25 + .2*h11(fi)) + h11(fi*3.));
+    vec2 p = vec2(fx + (h11(fi*7.) - .5)*.08 + sin(t*2. + fi)*.03*ph, fb + .05 + ph*.55);
+    col += vec3(1., .6, .2)*smoothstep(.004, 0., length(uv - p))*(1. - ph)*1.5; }
+  col *= 1. - .35*pow(length((gl_FragCoord.xy/uRes - .5)*1.3), 2.);
+  gl_FragColor = vec4(aces(col*1.2), 1.);
+}`,
+
+/* ---- Cabaña con chimenea ---- */
+cabana: `
+vec2 vor(vec2 p){ vec2 i = floor(p), f = fract(p); float d1 = 8., d2 = 8.;
+  for (int y = -1; y <= 1; y++) for (int x = -1; x <= 1; x++){ vec2 o = vec2(float(x), float(y)); vec2 r = o + h22(i + o)*.8 + .1 - f; float d = dot(r, r);
+    if (d < d1){ d2 = d1; d1 = d; } else if (d < d2) d2 = d; }
+  return vec2(sqrt(d1), sqrt(d2) - sqrt(d1)); }
+void main(){
+  vec2 uv = gl_FragCoord.xy/uRes.y; float asp = uRes.x/uRes.y; float t = uTime;
+  float cx = asp*.5; float floorY = .34;
+  float f = .82 + .18*sin(t*7.3)*sin(t*3.1 + 1.) + uLevel*.3;
+  vec2 firePos = vec2(cx, floorY + .05);
+  // pared de madera
+  float px = uv.x*9.; float pid = floor(px);
+  float grain = fbm(vec2(fract(px)*3. + pid*7., uv.y*18.)) ;
+  vec3 wood = vec3(.24, .13, .07)*(.55 + .5*grain)*(.8 + .25*h11(pid));
+  wood *= smoothstep(0., .03, fract(px))*smoothstep(1., .97, fract(px))*.6 + .4;
+  vec3 col = wood;
+  // suelo
+  float fz = (floorY - uv.y);
+  if (uv.y < floorY){ float pz = 1./(fz + .05); float fpx = (uv.x - cx)*pz*1.2; float plank = floor(pz*3.);
+    col = vec3(.2, .1, .05)*(.5 + .5*fbm(vec2(fpx*2., pz*8. + plank*3.)))*(.75 + .25*h11(plank));
+    col *= smoothstep(0., .06, fract(pz*3.))*.5 + .5; }
+  // chimenea de piedra
+  float sw = .52, sh = .42, sx0 = cx - sw*.5, sy0 = floorY;
+  float inSt = step(sx0, uv.x)*step(uv.x, sx0 + sw)*step(sy0, uv.y)*step(uv.y, sy0 + sh);
+  vec2 v = vor(uv*14.);
+  vec3 stone = vec3(.32, .29, .26)*(.6 + .5*h21(floor(uv*14. + v.x)))*(.7 + .3*fbm(uv*40.));
+  stone *= .45 + .55*smoothstep(.0, .06, v.y);
+  col = mix(col, stone, inSt);
+  float mantel = step(sx0 - .04, uv.x)*step(uv.x, sx0 + sw + .04)*step(sy0 + sh, uv.y)*step(uv.y, sy0 + sh + .035);
+  col = mix(col, vec3(.2, .1, .05)*(.7 + .3*fbm(uv*vec2(4., 40.))), mantel);
+  // hueco
+  float ow = .32, oh = .27; vec2 o = uv - vec2(cx, floorY);
+  float arch = step(abs(o.x), ow*.5)*step(0., o.y)*step(o.y, oh - (o.x*o.x)/(ow*ow*.25)*oh*.35);
+  vec3 hole = vec3(.03, .012, .006) + vec3(.9, .35, .1)*exp(-length(o - vec2(0., .04))*9.)*.5*f;
+  col = mix(col, hole, arch);
+  // fuego
+  vec2 q = (uv - firePos + vec2(0., .04))/.2;
+  float fl = flame(q, t)*arch;
+  col += fireCol(fl)*1.2;
+  vec2 q0 = uv - vec2(cx, floorY + .02);
+  float lg = smoothstep(.014, .01, abs(q0.y - q0.x*.2))*step(abs(q0.x), .11) + smoothstep(.014, .01, abs(q0.y + q0.x*.2))*step(abs(q0.x), .11);
+  col = mix(col, vec3(.07, .035, .02) + vec3(.7, .25, .05)*.2*f, clamp(lg, 0., 1.)*arch);
+  // luz del fuego en la habitación
+  float ld = length((uv - firePos)*vec2(.8, 1.));
+  col *= .28 + vec3(1., .62, .35)*(1.1*exp(-ld*2.2)*f);
+  col += vec3(.9, .4, .12)*exp(-ld*6.)*.08*f;
+  // ventana con nieve
+  vec2 wp = uv - vec2(asp*.12, .66); float wwin = step(abs(wp.x), .09)*step(abs(wp.y), .12);
+  if (wwin > 0.){ vec3 night = mix(vec3(.03, .05, .1), vec3(.08, .12, .22), wp.y*4. + .5);
+    vec2 g = vec2(wp.x*60., wp.y*60. + t*1.5); vec2 id = floor(g); vec2 ff = fract(g) - .5; vec2 r = h22(id);
+    night += smoothstep(.12, 0., length(ff - (r - .5)*.6 + vec2(sin(t + r.x*6.)*.15, 0.)))*step(.75, r.x)*.8;
+    float frame = step(.085, abs(wp.x)) + step(.115, abs(wp.y)) + step(abs(wp.x), .004) + step(abs(wp.y), .004);
+    col = mix(night, vec3(.08, .04, .02), clamp(frame, 0., 1.)); }
+  col *= 1. - .45*pow(length((gl_FragCoord.xy/uRes - .5)*1.25), 2.);
+  gl_FragColor = vec4(aces(col*1.25), 1.);
+}`,
+
+/* ---- Ventana de tren ---- */
+tren: `
+float ridgeH(float x, float f, float s){ return fbm3(vec2(x*f + s, s)); }
+void main(){
+  vec2 uv = gl_FragCoord.xy/uRes.y; float asp = uRes.x/uRes.y; float t = uTime;
+  float sway = sin(t*2.1)*.002 + sin(t*5.3)*.0008; vec2 p = uv + vec2(0., sway);
+  float hz = .36;
+  vec3 col = mix(vec3(1., .78, .5), vec3(.32, .3, .55), smoothstep(hz, 1., p.y)); col = mix(col, vec3(.12, .14, .3), smoothstep(.7, 1.1, p.y));
+  vec2 sun = vec2(asp*.68, hz + .1); float sd = length(p - sun);
+  col += vec3(1., .75, .45)*(.002/(sd*sd + .0015))*.15 + vec3(1., .6, .35)*exp(-sd*5.)*.35;
+  // capas con perspectiva atmosférica
+  float speeds[5];
+  for (int L = 0; L < 5; L++){
+    float fl = float(L); float sp = .004 + fl*fl*.02; float x = p.x + t*sp;
+    float base = hz + .2 - fl*.07; float amp = .14 - fl*.02;
+    float h = base + (ridgeH(x, 1.2 + fl*1.5, fl*3.) - .5)*amp*2.;
+    if (L >= 3){ h += pow(fbm(vec2(x*(30. + fl*20.), fl)), 2.)*.06*(fl - 2.); }
+    vec3 lc = mix(vec3(.6, .45, .55), vec3(.04, .035, .06), fl/4.);
+    lc = mix(lc, vec3(1., .72, .5), (1. - fl/4.)*.25);
+    float m = smoothstep(h + .003*(1. + fl), h - .003*(1. + fl), p.y);
+    col = mix(col, lc*(.85 + .15*fbm(vec2(x*8., p.y*8.))), m);
+  }
+  // postes con desenfoque de movimiento
+  float pp = fract((p.x + t*.9)*.45); float pole = smoothstep(.02, 0., abs(pp - .5))*step(p.y, .95);
+  col = mix(col, vec3(.02, .02, .03), pole*.8);
+  float wire = smoothstep(.003, 0., abs(p.y - (.86 - .06*pow(sin(pp*PI), 1.))))*.8;
+  col = mix(col, vec3(.03, .03, .05), wire);
+  // marco de la ventana e interior
+  vec2 c = uv - vec2(asp*.5, .54); vec2 hs = vec2(asp*.44, .34); float rr = .05;
+  vec2 dq = abs(c) - hs + rr; float box = length(max(dq, 0.)) + min(max(dq.x, dq.y), 0.) - rr;
+  float win = smoothstep(.004, -.004, box);
+  float refl = smoothstep(.0, .2, fract((uv.x - uv.y*.6 - t*.01)*.8))*smoothstep(.4, .2, fract((uv.x - uv.y*.6 - t*.01)*.8));
+  col += refl*.04;
+  vec3 interior = mix(vec3(.035, .04, .055), vec3(.012, .014, .02), smoothstep(.0, 1., uv.y));
+  interior += vec3(.5, .35, .25)*.05*smoothstep(.05, 0., abs(box - .02));
+  col = mix(interior, col, win);
+  col = mix(col, vec3(.09, .1, .13), smoothstep(.012, 0., abs(box - .006))*.8);
+  col *= 1. - .35*pow(length((gl_FragCoord.xy/uRes - .5)*1.25), 2.);
+  gl_FragColor = vec4(aces(col*1.05), 1.);
+}`,
+
+/* ---- Planetario: Tierra con texturas reales, Saturno y el Sol ---- */
+planetario: `
+vec3 rotY(vec3 p, float a){ float c = cos(a), s = sin(a); return vec3(c*p.x + s*p.z, p.y, -s*p.x + c*p.z); }
+vec3 rotX(vec3 p, float a){ float c = cos(a), s = sin(a); return vec3(p.x, c*p.y - s*p.z, s*p.y + c*p.z); }
+vec3 rotZ(vec3 p, float a){ float c = cos(a), s = sin(a); return vec3(c*p.x - s*p.y, s*p.x + c*p.y, p.z); }
+void main(){
+  vec2 uv = (gl_FragCoord.xy - .5*uRes)/uRes.y; float asp = uRes.x/uRes.y; float t = uTime;
+  bool port = asp < .85;
+  vec3 col = vec3(.003, .004, .012);
+  float neb = fbm(uv*2.2 + vec2(t*.003, 0.)); float neb2 = fbm(uv*3.5 - 4.);
+  col += vec3(.22, .1, .35)*pow(neb, 3.)*.9 + vec3(.05, .22, .3)*pow(neb2, 4.)*1.1;
+  col += stars(uv, t, 90.) + stars(uv + 7.7, t*1.3, 200.)*.7;
+  vec2 sunP = port ? vec2(-asp*.24, -.06) : vec2(-asp*.33, .3);
+  vec2 earthP = port ? vec2(asp*.2, .04) : vec2(asp*.27, .12);
+  vec2 satP = port ? vec2(asp*.05, -.22) : vec2(-asp*.36, -.17);
+  earthP.y += sin(t*.3)*.012; satP.y += sin(t*.25 + 1.)*.01;
+  // Sol
+  float sr = (port ? .05 : .085)*(1. + uLevel*.25 + uBreath*.05);
+  vec2 sq = uv - sunP; float sdd = length(sq);
+  col += vec3(1., .55, .2)*exp(-sdd*6.)*.5 + vec3(1., .75, .4)*(.0009/(sdd*sdd + .0008))*.12;
+  if (sdd < sr){ float mu = sqrt(1. - pow(sdd/sr, 2.));
+    float gran = fbm(sq*90. + t*.15)*.35 + fbm(sq*30. - t*.05)*.3;
+    vec3 sc = mix(vec3(1., .45, .1), vec3(1., .92, .7), pow(mu, .6))*(1.15 + gran*.4);
+    col = mix(col, sc*1.6, smoothstep(sr, sr*.97, sdd)); }
+  vec3 L3 = normalize(vec3(sunP, .6));
+  // Tierra
+  float er = port ? .1 : .17; vec2 eq = (uv - earthP)/er; float e2 = dot(eq, eq);
+  vec3 Ld = normalize(vec3(sunP - earthP, .55));
+  if (e2 < 1.){ vec3 n = vec3(eq, sqrt(1. - e2));
+    vec3 pn = rotX(rotZ(n, .41), -.15); pn = rotY(pn, t*.03);
+    float lon = atan(pn.x, pn.z), lat = asin(clamp(pn.y, -1., 1.));
+    vec2 tuv = vec2(lon/(2.*PI) + .5, .5 - lat/PI);
+    vec3 alb = texture2D(uTex0, tuv).rgb;
+    float cl = texture2D(uTex1, vec2(fract(tuv.x + t*.002), tuv.y)).r;
+    float dif = max(dot(n, Ld), 0.);
+    float ocean = smoothstep(.1, .3, alb.b - alb.r);
+    vec3 h = normalize(Ld + vec3(0., 0., 1.)); float spec = pow(max(dot(n, h), 0.), 40.)*ocean*.6;
+    vec3 surf = alb*1.1*dif + spec*vec3(1., .9, .75);
+    surf = mix(surf, vec3(1.)*dif*1.05, cl*.9);
+    float night = smoothstep(.1, -.1, dot(n, Ld));
+    surf += vec3(.02, .03, .06)*night;
+    float fres = pow(1. - n.z, 3.);
+    surf += vec3(.3, .55, 1.)*fres*(.25 + .9*smoothstep(-.2, .5, dot(n, Ld)));
+    col = mix(col, surf, smoothstep(1., .985, e2)); }
+  float halo = smoothstep(1.25, 1., sqrt(e2))*smoothstep(.98, 1.02, sqrt(e2));
+  col += vec3(.3, .55, 1.)*halo*.35*max(.2, dot(normalize(vec3(eq, .2)), Ld));
+  // Saturno
+  float srad = port ? .045 : .08; vec2 sq2 = (uv - satP)/srad;
+  float tilt = .38; vec2 rq = vec2(cos(tilt)*sq2.x + sin(tilt)*sq2.y, -sin(tilt)*sq2.x + cos(tilt)*sq2.y);
+  vec2 rr2 = vec2(rq.x, rq.y/.26); float rd = length(rr2);
+  float ringMask = smoothstep(1.35, 1.38, rd)*smoothstep(2.35, 2.3, rd);
+  float bands = .7 + .2*sin(rd*22.) + .1*sin(rd*47.); float cass = smoothstep(.03, 0., abs(rd - 1.95));
+  vec3 ringC = vec3(.86, .76, .6)*bands*(1. - cass*.85);
+  float front = step(0., -rq.y);
+  float p2 = dot(rq*vec2(1., 1.08), rq*vec2(1., 1.08));
+  vec3 Ls = normalize(vec3(sunP - satP, .5));
+  if (front < .5 && ringMask > 0.) col = mix(col, ringC*.9, ringMask*.85);
+  if (p2 < 1.){ vec3 n = vec3(rq*vec2(1., 1.08), sqrt(1. - p2));
+    float lat = n.y; float bnd = sin(lat*18. + fbm3(vec2(lat*10., t*.01))*2.)*.5 + .5;
+    vec3 sc = mix(vec3(.82, .68, .45), vec3(.93, .84, .64), bnd);
+    float dif = max(dot(n, Ls), 0.)*.95 + .05;
+    float rshadow = 1. - .45*smoothstep(.06, 0., abs(n.y + .05))*step(0., n.y + .2);
+    col = mix(col, sc*dif*rshadow, smoothstep(1., .97, p2)); }
+  if (front > .5 && ringMask > 0.){ float shad = 1.; if (rq.y < 0. && abs(rq.x) < 1. && rq.x*Ls.x < 0.) shad = .35;
+    col = mix(col, ringC*shad, ringMask*.88); }
+  col *= 1. - .3*dot(uv/vec2(asp*.7, .8), uv/vec2(asp*.7, .8));
+  gl_FragColor = vec4(aces(col*1.2), 1.);
+}`
+  };
+
+  const progs = {};
+  function compile(src, type){ const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)){ console.error(gl.getShaderInfoLog(s)); return null; } return s; }
+  const vsSrc = 'attribute vec2 p;void main(){gl_Position=vec4(p,0.,1.);}';
+  function program(name){
+    if (progs[name] !== undefined) return progs[name];
+    const vs = compile(vsSrc, gl.VERTEX_SHADER), fs = compile(COMMON + SCENES[name], gl.FRAGMENT_SHADER);
+    if (!vs || !fs){ progs[name] = null; return null; }
+    const pr = gl.createProgram(); gl.attachShader(pr, vs); gl.attachShader(pr, fs); gl.bindAttribLocation(pr, 0, 'p'); gl.linkProgram(pr);
+    if (!gl.getProgramParameter(pr, gl.LINK_STATUS)){ console.error(gl.getProgramInfoLog(pr)); progs[name] = null; return null; }
+    const u = {}; ['uRes','uTime','uLevel','uBreath','uHour','uTex0','uTex1'].forEach(k => u[k] = gl.getUniformLocation(pr, k));
+    progs[name] = { pr, u }; return progs[name];
+  }
+  const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
+  gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+
+  const tex = [null, null];
+  function loadTex(i, url){
+    const tx = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, tx);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([20, 60, 120, 255]));
+    tex[i] = tx;
+    const img = new Image(); img.onload = () => { gl.bindTexture(gl.TEXTURE_2D, tx); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE); };
+    img.src = url;
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  }
+  loadTex(0, 'assets/earth.jpg'); loadTex(1, 'assets/clouds.jpg');
+
+  let scale = .6, lastFrame = 0, slow = 0, fast = 0;
+  function draw(name, t, st, w, h){
+    const P = program(name); if (!P) return false;
+    if (cv.width !== w || cv.height !== h){ cv.width = w; cv.height = h; }
+    gl.viewport(0, 0, w, h); gl.useProgram(P.pr);
+    gl.uniform2f(P.u.uRes, w, h); gl.uniform1f(P.u.uTime, t); gl.uniform1f(P.u.uLevel, Math.min(1, st.level*4));
+    gl.uniform1f(P.u.uBreath, st.breath == null ? 0 : st.breath); const d = new Date(); gl.uniform1f(P.u.uHour, d.getHours() + d.getMinutes()/60);
+    gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, tex[0]); gl.uniform1i(P.u.uTex0, 0);
+    gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, tex[1]); gl.uniform1i(P.u.uTex1, 1);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    return true;
+  }
+  return {
+    has: name => !!SCENES[name],
+    ok: name => !!program(name),
+    frame(name, t, st){
+      const now = performance.now(), dt = now - lastFrame; lastFrame = now;
+      if (dt > 0 && dt < 200){ if (dt > 30){ slow++; fast = 0; } else if (dt < 18){ fast++; slow = 0; }
+        if (slow > 20){ scale = Math.max(.45, scale - .08); slow = 0; } if (fast > 90){ scale = Math.min(1, scale + .05); fast = 0; } }
+      const dpr = Math.min(2, devicePixelRatio || 1);
+      return draw(name, t, st, Math.max(2, Math.round(innerWidth*dpr*scale)), Math.max(2, Math.round(innerHeight*dpr*scale)));
+    },
+    snapshot(name, canvas, t){ const w = canvas.width, h = canvas.height; if (!draw(name, t, { level:.05, breath:null }, w, h)) return false;
+      canvas.getContext('2d').drawImage(cv, 0, 0, w, h); return true; }
+  };
+})();
+
 /* ---------- Escenas animadas (todo dibujado en código, sin imágenes) ---------- */
 const Scene = (() => {
   const TAU = Math.PI * 2;
   const cv = document.getElementById('scene'), cx = cv.getContext('2d');
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  let W = 0, H = 0, DPR = 1, theme = 'clasico', t0 = performance.now();
+  let W = 0, H = 0, DPR = 1, theme = 'clasico', realistic = true, t0 = performance.now();
+  const glc = document.getElementById('gl');
   const state = { level: 0, breath: null };
   function rng(seed){ let a = seed >>> 0; return () => { a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
   const R = rng(20261117);
@@ -501,6 +986,23 @@ const Scene = (() => {
       vignette(c, w, h, .45);
     },
 
+    coche(c, w, h, t){
+      c.fillStyle = lin(c, 0, 0, 0, h, [[0, '#06080f'], [1, '#141019']]); c.fillRect(0, 0, w, h);
+      for (let i = 0; i < 30; i++){ const x = ((stars[i].x * w + t * 12 * (i % 3 - 1)) % w + w) % w, y = h * (.45 + stars[i].y * .3), r = 10 + stars[i].r * 22;
+        glow(c, x, y, r, ['rgba(255,80,50,.35)', 'rgba(255,190,110,.3)', 'rgba(140,190,255,.3)'][i % 3]); }
+      for (const q of snow){ const x = q.x * w, y = ((q.o * h + t * 40 * q.s) % h); c.fillStyle = 'rgba(200,220,255,.18)'; c.beginPath(); c.ellipse(x, y, 2 + q.r * 3, 3 + q.r * 4, 0, 0, TAU); c.fill(); }
+      c.fillStyle = '#05060a'; c.fillRect(0, h * .86, w, h * .14); vignette(c, w, h, .55);
+    },
+    nubes(c, w, h, t){
+      c.fillStyle = lin(c, 0, 0, 0, h, [[0, '#3f6fb4'], [1, '#bcd6ef']]); c.fillRect(0, 0, w, h);
+      for (let i = 0; i < 9; i++){ const q = stars[i], x = ((q.x * w * 1.4 + t * (6 + i * 2)) % (w * 1.4)) - w * .2, y = h * (.15 + q.y * .6), r = Math.min(w, h) * (.12 + q.r * .06);
+        for (let k = 0; k < 5; k++) glow(c, x + (k - 2) * r * .55, y + Math.sin(k * 2 + i) * r * .15, r, 'rgba(255,255,255,.55)'); }
+    },
+    bosque(c, w, h, t){
+      c.fillStyle = lin(c, 0, 0, 0, h, [[0, '#d9cf9c'], [1, '#6f8a5c']]); c.fillRect(0, 0, w, h);
+      for (let L = 0; L < 4; L++) for (let i = 0; i < 9; i++){ const x = ((i + .5) / 9 + Math.sin(i * 7 + L) * .04) * w, tw = 6 + L * 9; c.fillStyle = 'rgba(' + [40, 30, 20, 10][L] + ',' + [60, 45, 30, 15][L] + ',' + [40, 30, 20, 10][L] + ',' + (.35 + L * .2) + ')'; c.fillRect(x - tw / 2, 0, tw, h); }
+      vignette(c, w, h, .4);
+    },
     tren(c, w, h, t, s){
       const m = Math.min(w, h), oy = Math.sin(t * 2.1) * 1.4 + Math.sin(t * 5.3) * .5;
       const wx = w * .07, wy = h * .1, ww = w * .86, wh = h * .6, hz = wy + wh * .66 + oy;
@@ -529,13 +1031,18 @@ const Scene = (() => {
   };
 
   function resize(){ DPR = Math.min(2, devicePixelRatio || 1); W = innerWidth; H = innerHeight; cv.width = W * DPR; cv.height = H * DPR; }
+  const useGL = th => realistic && typeof GLScenes !== 'undefined' && GLScenes && GLScenes.has(th) && GLScenes.ok(th);
   function loop(now){
-    if (!document.hidden){ const t = (now - t0) / 1000 * (reduce ? .3 : 1); cx.setTransform(DPR, 0, 0, DPR, 0, 0); try { scenes[theme](cx, W, H, t, state); } catch(e){ console.error(e); } }
+    if (!document.hidden){ const t = (now - t0) / 1000 * (reduce ? .3 : 1), g = useGL(theme);
+      glc.style.display = g ? 'block' : 'none'; cv.style.display = g ? 'none' : 'block';
+      try { if (g) GLScenes.frame(theme, t, state); else { cx.setTransform(DPR, 0, 0, DPR, 0, 0); (scenes[theme] || scenes.clasico)(cx, W, H, t, state); } } catch(e){ console.error(e); } }
     requestAnimationFrame(loop);
   }
   function preview(canvas, th){ const d = Math.min(2, devicePixelRatio || 1), w = canvas.clientWidth || 160, h = canvas.clientHeight || 100; canvas.width = w * d; canvas.height = h * d;
-    const c = canvas.getContext('2d'); c.setTransform(d, 0, 0, d, 0, 0); scenes[th](c, w, h, 14.2, { level: .05, breath: null }); }
-  return { state, preview, set theme(v){ if (scenes[v]) theme = v; }, start(){ resize(); addEventListener('resize', resize); requestAnimationFrame(loop); } };
+    if (useGL(th) && GLScenes.snapshot(th, canvas, 14.2)) return;
+    const c = canvas.getContext('2d'); c.setTransform(d, 0, 0, d, 0, 0); (scenes[th] || scenes.clasico)(c, w, h, 14.2, { level: .05, breath: null }); }
+  return { state, preview, set theme(v){ theme = v; }, set realistic(v){ realistic = !!v; }, glOK: () => typeof GLScenes !== 'undefined' && !!GLScenes,
+    start(){ resize(); addEventListener('resize', resize); requestAnimationFrame(loop); } };
 })();
 
 (() => {
@@ -584,8 +1091,8 @@ const MODE_LABEL = { focus:'Enfoque', calm:'Calma', sleep:'Dormir' };
 const PALETTES = ['calido','cristal','naturaleza','electronico'];
 
 /* ---------- Estado ---------- */
-const PERSIST = ['volume','minutes','binaural','timeAdapt','hrManual','profile','likes','spatial','task','recent','theme','themeSound','themeVol'];
-const S = { theme:'planetario', themeSound:true, themeVol:.5, recent:[], spatial:true, task:'', volume:.7, minutes:45, binaural:false, timeAdapt:true, hrManual:null, hrLive:null, profile:null,
+const PERSIST = ['volume','minutes','binaural','timeAdapt','hrManual','profile','likes','spatial','task','recent','theme','themeSound','themeVol','realistic'];
+const S = { realistic:true, theme:'planetario', themeSound:true, themeVol:.5, recent:[], spatial:true, task:'', volume:.7, minutes:45, binaural:false, timeAdapt:true, hrManual:null, hrLive:null, profile:null,
             likes:{ calido:0, cristal:0, naturaleza:0, electronico:0 },
             amRate:16, amDepth:.5, noise:'brown', noiseVol:.2, music:.85, natureVol:.8, cutoff:1800 };
 try { const sv = JSON.parse(localStorage.getItem('sosiego2') || '{}'); PERSIST.forEach(k => { if (k in sv) S[k] = sv[k]; }); } catch(e){}
@@ -952,7 +1459,8 @@ function stop(secs = 2.5){
   setPlayUI(); $('#remain').textContent = ''; showGuide();
 }
 /* ---------- Ambientes ---------- */
-const THEMES = { planetario:{ name:'Planetario', sound:null }, agua:{ name:'Bajo el agua', sound:'agua' }, cabana:{ name:'Cabaña', sound:'fuego' },
+const THEMES = { planetario:{ name:'Planetario', sound:null }, nubes:{ name:'Nubes', sound:'aire' }, bosque:{ name:'Bosque', sound:'bosque' },
+  agua:{ name:'Bajo el agua', sound:'agua' }, coche:{ name:'Coche bajo la lluvia', sound:'coche' }, cabana:{ name:'Cabaña', sound:'fuego' },
   fogata:{ name:'Fogata', sound:'fogata' }, tren:{ name:'Tren', sound:'tren' }, clasico:{ name:'Clásico · origen', sound:null } };
 let themeNodes = [], themeEv = {};
 function stopThemeSound(){
@@ -968,7 +1476,11 @@ function startThemeSound(){
   if (kind === 'fuego' || kind === 'fogata'){ loop('brown', 'lowpass', kind === 'fuego' ? 260 : 200, .7, .5); if (kind === 'fogata') loop('pink', 'bandpass', 500, .8, .1); }
   if (kind === 'agua'){ const a = loop('brown', 'lowpass', 380, .7, .75); const l = ctx.createOscillator(); l.frequency.value = .07; const lg = ctx.createGain(); lg.gain.value = 120; l.connect(lg); lg.connect(a.fl.frequency); l.start(); nodes.push(l); }
   if (kind === 'tren'){ loop('brown', 'lowpass', 160, .7, .8); loop('pink', 'bandpass', 700, 1.2, .05); }
-  themeNodes = nodes; themeEv = { kind, out, next: ctx.currentTime + .5 };
+  let wind = null;
+  if (kind === 'coche'){ const r = loop('pink', 'lowpass', 3200, .6, .5); const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 350; r.g.disconnect(); r.g.connect(hp); hp.connect(out); loop('brown', 'lowpass', 110, .7, .3); }
+  if (kind === 'aire'){ wind = loop('pink', 'bandpass', 450, .9, .55); }
+  if (kind === 'bosque'){ wind = loop('pink', 'bandpass', 350, .8, .3); const lv = loop('pink', 'highpass', 2200, .7, .12); const l = ctx.createOscillator(); l.frequency.value = .13; const lg = ctx.createGain(); lg.gain.value = .07; l.connect(lg); lg.connect(lv.g.gain); l.start(); nodes.push(l); }
+  themeNodes = nodes; themeEv = { kind, out, wind, next: ctx.currentTime + .5, nextWind: 0 };
 }
 function crackle(t, dest){
   const s = ctx.createBufferSource(), bp = ctx.createBiquadFilter(), g = ctx.createGain(), pop = Math.random() < .12;
@@ -988,13 +1500,29 @@ function clack(t, dest, v = 1){
   const o = ctx.createOscillator(), og = ctx.createGain(); o.frequency.value = 68; og.gain.setValueAtTime(0, t); og.gain.linearRampToValueAtTime(.12 * v, t + .005); og.gain.setTargetAtTime(0, t + .006, .06);
   o.connect(og); og.connect(dest); o.start(t); o.stop(t + .5);
 }
+function roofTick(t, dest){ // gota en el techo del coche
+  const s = ctx.createBufferSource(), bp = ctx.createBiquadFilter(), g = ctx.createGain(); s.buffer = NB.white; bp.type = 'bandpass'; bp.frequency.value = rnd(1800, 5500); bp.Q.value = 2.5;
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(rnd(.01, .045), t + .002); g.gain.setTargetAtTime(0, t + .003, .012);
+  s.connect(bp); bp.connect(g); g.connect(panned(dest, rnd(-.8, .8))); s.start(t, rnd(0, 7), .1);
+}
+function bird(t, dest){ // pájaro lejano, suave
+  const n = 2 + Math.floor(Math.random()*3), base = rnd(2300, 3600), p = panned(dest, rnd(-.8, .8));
+  for (let i = 0; i < n; i++){ const tt = t + i * rnd(.12, .2), o = ctx.createOscillator(), g = ctx.createGain(), lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 5000;
+    o.frequency.setValueAtTime(base * rnd(.9, 1.05), tt); o.frequency.exponentialRampToValueAtTime(base * rnd(1.15, 1.4), tt + .07);
+    g.gain.setValueAtTime(0, tt); g.gain.linearRampToValueAtTime(.012, tt + .01); g.gain.setTargetAtTime(0, tt + .05, .02);
+    o.connect(lp); lp.connect(g); g.connect(p); o.start(tt); o.stop(tt + .3); }
+}
 function themeTick(ahead){
   const e = themeEv; if (!e.kind) return;
   while (e.next < ahead){ const t = e.next;
     if (e.kind === 'fuego' || e.kind === 'fogata'){ crackle(t, e.out); e.next += -Math.log(1 - Math.random()) * (e.kind === 'fuego' ? .2 : .15); }
     else if (e.kind === 'agua'){ blub(t, e.out); e.next += rnd(.8, 4); }
-    else { clack(t, e.out); clack(t + .13, e.out, .8); e.next += 1.25 + rnd(-.03, .03); }
+    else if (e.kind === 'tren'){ clack(t, e.out); clack(t + .13, e.out, .8); e.next += 1.25 + rnd(-.03, .03); }
+    else if (e.kind === 'coche'){ roofTick(t, e.out); e.next += -Math.log(1 - Math.random()) * .045; }
+    else if (e.kind === 'bosque'){ bird(t, e.out); e.next += rnd(7, 20); }
+    else e.next += 5;
   }
+  if (e.wind && ctx.currentTime >= e.nextWind){ const now = ctx.currentTime; e.wind.fl.frequency.setTargetAtTime(rnd(250, e.kind === 'aire' ? 900 : 600), now, 3); e.wind.g.gain.setTargetAtTime(rnd(.25, .6) * (e.kind === 'aire' ? 1 : .55), now, 3.5); e.nextWind = now + rnd(4, 9); }
 }
 function applyTheme(id, fromUser){
   if (!THEMES[id]) id = 'planetario'; S.theme = id; document.body.dataset.theme = id; Scene.theme = id;
@@ -1008,11 +1536,14 @@ function openThemes(){
     b.innerHTML = '<canvas></canvas><span>' + th.name + '</span>'; b.addEventListener('click', () => applyTheme(id, true)); g.appendChild(b); });
   $('#themes').classList.add('open'); applyTheme(S.theme);
   if (!previewsDone){ previewsDone = true; requestAnimationFrame(() => $$('.theme-card').forEach(b => Scene.preview(b.querySelector('canvas'), b.dataset.theme))); }
+  $('#realistic').checked = S.realistic; $('#realistic').closest('label').hidden = !Scene.glOK();
   $('#themeSound').checked = S.themeSound; $('#themeVol').value = S.themeVol; $('#themeVolO').textContent = Math.round(S.themeVol * 100) + '%';
 }
 $('#themeBtn').addEventListener('click', openThemes);
 $('#themesClose').addEventListener('click', () => $('#themes').classList.remove('open'));
 $('#themes').addEventListener('click', e => { if (e.target.id === 'themes') $('#themes').classList.remove('open'); });
+$('#realistic').addEventListener('change', e => { S.realistic = e.target.checked; Scene.realistic = S.realistic; save();
+  requestAnimationFrame(() => $$('.theme-card').forEach(b => Scene.preview(b.querySelector('canvas'), b.dataset.theme))); });
 $('#themeSound').addEventListener('change', e => { S.themeSound = e.target.checked; save(); if (running) startThemeSound(); });
 $('#themeVol').addEventListener('input', e => { S.themeVol = +e.target.value; $('#themeVolO').textContent = Math.round(S.themeVol * 100) + '%'; save(); if (themeEv.out) themeEv.out.gain.setTargetAtTime(S.themeVol, ctx.currentTime, .2); });
 
@@ -1190,7 +1721,7 @@ function frame(){
 document.addEventListener('visibilitychange', async () => { if (document.visibilityState === 'visible' && running && !wakeLock){ try { wakeLock = await navigator.wakeLock.request('screen'); } catch(e){} } });
 setInterval(updateRhythmInfo, 1000);
 
-applyTheme(S.theme); Scene.start();
+Scene.realistic = S.realistic; applyTheme(S.theme); Scene.start();
 markDur(); syncSliders(); setPlayUI(); updateRhythmInfo(); requestAnimationFrame(frame);
 try { if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {}); } catch(e){}
 })();

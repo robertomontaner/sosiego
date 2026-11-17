@@ -1,6 +1,6 @@
 // Service worker mínimo: guarda la app en caché para que funcione sin conexión.
-const CACHE = 'sosiego-v4';
-const FILES = ['./', './index.html', './manifest.json', './icon.svg'];
+const CACHE = 'sosiego-v5';
+const FILES = ['./', './index.html', './manifest.json', './icon.svg', './assets/earth.jpg', './assets/clouds.jpg'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
