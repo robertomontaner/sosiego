@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sosiego — sonido para enfocarte y calmarte, libre y gratis</title>
+<meta name="description" content="Sonido generativo y adaptativo para concentrarte, calmar la ansiedad y dormir. Código abierto, gratis, sin cuenta, funciona sin conexión.">
+<meta name="theme-color" content="#0b1020">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<style>
+:root{
+  --bg:#0b1020; --bg2:#141b34; --card:rgba(255,255,255,.05); --line:rgba(255,255,255,.1);
+  --txt:#e8ecf8; --mut:#9aa6c8; --a:#7fd6c8; --b:#9b8cff; --warn:#ffcf8a;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  min-height:100vh; color:var(--txt);
+  font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  background:radial-gradient(1200px 700px at 50% -10%,#1d2750 0%,var(--bg2) 40%,var(--bg) 100%) fixed;
+}
+main{max-width:620px;margin:0 auto;padding:28px 18px 60px}
+h1{margin:0;font-size:28px;letter-spacing:.5px;font-weight:650}
+.sub{margin:4px 0 0;color:var(--mut);font-size:14.5px}
+.stage{display:flex;justify-content:center;margin:30px 0 14px}
+.orb-wrap{position:relative;width:250px;height:250px;display:grid;place-items:center}
+.orb{
+  position:absolute;inset:14px;border-radius:50%;
+  background:radial-gradient(circle at 35% 30%,#bff5ea 0%,var(--a) 28%,var(--b) 75%,#4a3fb5 100%);
+  box-shadow:0 0 60px rgba(127,214,200,.35),0 0 140px rgba(155,140,255,.25);
+  transform:scale(.9);will-change:transform;opacity:.92
+}
+.orb-text{position:relative;text-align:center;color:#0b1020;pointer-events:none}
+#orbMain{font-size:22px;font-weight:650}
+#orbSub{font-size:12.5px;opacity:.75;margin-top:2px}
+.modes{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.modes button{
+  background:var(--card);border:1px solid var(--line);color:var(--txt);border-radius:14px;
+  padding:12px 6px;font-size:15px;cursor:pointer;transition:.2s
+}
+.modes button .em{display:block;font-size:20px;margin-bottom:2px}
+.modes button[aria-pressed=true]{background:linear-gradient(135deg,rgba(127,214,200,.22),rgba(155,140,255,.22));border-color:var(--a)}
+.modes button .sug{display:block;font-size:11px;color:var(--warn);height:14px}
+.desc{color:var(--mut);font-size:14px;min-height:42px;margin:12px 2px 6px;text-align:center}
+.play{
+  display:block;width:100%;margin:6px 0 16px;padding:16px;font-size:18px;font-weight:650;color:#0b1020;
+  border:0;border-radius:16px;cursor:pointer;background:linear-gradient(135deg,var(--a),var(--b));
+}
+.play:active{transform:scale(.99)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 18px}
+.chips span.l{color:var(--mut);font-size:14px;margin-right:4px}
+.chips button{background:var(--card);border:1px solid var(--line);color:var(--txt);border-radius:999px;padding:6px 14px;cursor:pointer}
+.chips button[aria-pressed=true]{border-color:var(--a);background:rgba(127,214,200,.18)}
+#remain{margin-left:auto;color:var(--mut);font-variant-numeric:tabular-nums}
+details.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:4px 16px;margin:0 0 12px}
+details.card summary{cursor:pointer;padding:12px 0;font-weight:600;list-style:none}
+details.card summary::-webkit-details-marker{display:none}
+details.card summary::after{content:"＋";float:right;color:var(--mut)}
+details.card[open] summary::after{content:"－"}
+.card .body{padding:0 0 14px;color:#cfd6ee;font-size:14.5px}
+.field{display:grid;grid-template-columns:150px 1fr 74px;gap:10px;align-items:center;margin:10px 0}
+.field label{color:var(--mut);font-size:14px}
+.field output{font-size:13px;color:var(--mut);text-align:right;font-variant-numeric:tabular-nums}
+input[type=range]{width:100%;accent-color:var(--a)}
+select,input[type=number]{background:#0f1630;color:var(--txt);border:1px solid var(--line);border-radius:10px;padding:8px}
+.check{display:flex;gap:10px;align-items:flex-start;margin:12px 0;font-size:14.5px}
+.check input{margin-top:4px;accent-color:var(--a)}
+.btn{background:rgba(127,214,200,.14);border:1px solid var(--a);color:var(--txt);border-radius:12px;padding:9px 14px;cursor:pointer;font-size:14.5px}
+.btns{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0}
+.note{font-size:13px;color:var(--mut)}
+.tag{display:inline-block;font-size:11.5px;padding:1px 8px;border-radius:99px;border:1px solid var(--line);color:var(--mut);margin-left:6px}
+.warn{color:var(--warn)}
+ul{padding-left:20px;margin:8px 0}
+li{margin:6px 0}
+footer{margin-top:26px;color:var(--mut);font-size:13px;text-align:center}
+a{color:var(--a)}
+@media (max-width:520px){.field{grid-template-columns:1fr 70px}.field label{grid-column:1/-1}.field input[type=range]{grid-column:1}}
+@media (prefers-reduced-motion:reduce){.orb{transition:none}}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Sosiego</h1>
+    <p class="sub">Sonido adaptativo para concentrarte, calmar la ansiedad y dormir. Libre, gratis, sin cuenta.</p>
+  </header>
+
+  <section class="stage" aria-live="polite">
+    <div class="orb-wrap">
+      <div class="orb" id="orb"></div>
+      <div class="orb-text"><div id="orbMain">Elige un modo</div><div id="orbSub"></div></div>
+    </div>
+  </section>
+
+  <div class="modes" id="modes" role="group" aria-label="Modo">
+    <button data-mode="focus" aria-pressed="false"><span class="em">◎</span>Enfoque<span class="sug"></span></button>
+    <button data-mode="calm" aria-pressed="false"><span class="em">≈</span>Calma<span class="sug"></span></button>
+    <button data-mode="sleep" aria-pressed="false"><span class="em">☾</span>Dormir<span class="sug"></span></button>
+  </div>
+  <p class="desc" id="modeDesc"></p>
+
+  <button class="play" id="play">▶ Empezar</button>
+
+  <div class="chips" id="dur">
+    <span class="l">Sesión</span>
+    <button data-min="25" aria-pressed="false">25 min</button>
+    <button data-min="45" aria-pressed="false">45 min</button>
+    <button data-min="60" aria-pressed="false">1 h</button>
+    <button data-min="90" aria-pressed="false">1,5 h</button>
+    <button data-min="0" aria-pressed="false">Sin límite</button>
+    <span id="remain"></span>
+  </div>
+
+  <details class="card" open>
+    <summary>Tu ritmo <span class="tag">adaptación</span></summary>
+    <div class="body">
+      <p style="margin-top:0">Sosiego ajusta el <b>pulso de las campanas</b> y la <b>guía de respiración</b> a tu propio ritmo. En Calma y Dormir, el pulso baja poco a poco por debajo del tuyo (hasta ~20 lpm) para invitar a tu cuerpo a seguirlo.</p>
+      <div class="btns">
+        <label for="hrIn" class="note">Mis latidos por minuto</label>
+        <input type="number" id="hrIn" min="40" max="180" placeholder="p. ej. 78" style="width:92px">
+        <button class="btn" id="tap">Marcar mi pulso (toca al ritmo)</button>
+      </div>
+      <p class="note" style="margin:4px 0">Tómate el pulso en la muñeca y ve tocando el botón al ritmo (4 toques o más), o escribe el número que te marca tu reloj o pulsera.</p>
+      <div class="btns" id="btRow" hidden>
+        <button class="btn" id="btHr">Conectar pulsómetro Bluetooth</button>
+        <span class="note" id="btState"></span>
+      </div>
+      <p class="note" id="btNote" hidden>Funciona con bandas de pecho (Polar, Wahoo, etc.) y relojes que emitan pulso por Bluetooth estándar, con Chrome o Edge en Android u ordenador.</p>
+      <label class="check"><input type="checkbox" id="timeAdapt"><span>Adaptar el brillo del sonido a la hora del día (más claro por la mañana, más oscuro por la noche).</span></label>
+      <p class="note" id="rhythmInfo" style="margin:0"></p>
+    </div>
+  </details>
+
+  <details class="card">
+    <summary>Ajustes del sonido</summary>
+    <div class="body">
+      <div class="field"><label for="vol">Volumen</label><input type="range" id="vol" min="0" max="1" step=".01"><output id="volO"></output></div>
+      <div class="field"><label for="music">Música</label><input type="range" id="music" min="0" max="1" step=".01"><output id="musicO"></output></div>
+      <div class="field"><label for="noiseVol">Ruido de fondo</label><input type="range" id="noiseVol" min="0" max=".6" step=".01"><output id="noiseVolO"></output></div>
+      <div class="field"><label for="noiseType">Tipo de ruido</label>
+        <select id="noiseType"><option value="none">Ninguno</option><option value="brown">Marrón (grave)</option><option value="pink">Rosa</option><option value="white">Blanco</option></select><span></span></div>
+      <div class="field"><label for="amDepth">Modulación: intensidad</label><input type="range" id="amDepth" min="0" max=".8" step=".01"><output id="amDepthO"></output></div>
+      <div class="field"><label for="amRate">Modulación: velocidad</label><input type="range" id="amRate" min="4" max="24" step="1"><output id="amRateO"></output></div>
+      <label class="check"><input type="checkbox" id="binaural"><span>Añadir tono binaural <span class="note">(solo con auriculares; la evidencia es mixta)</span></span></label>
+      <p class="note" style="margin-bottom:0">Si la modulación te molesta o te cansa, bájala o ponla a 0: no funciona igual para todo el mundo.</p>
+    </div>
+  </details>
+
+  <details class="card">
+    <summary>Qué dice la ciencia (y qué no) <span class="tag">honestidad</span></summary>
+    <div class="body">
+      <p class="warn" style="margin-top:0"><b>Sosiego no es un tratamiento médico.</b> No cura el TDAH ni la ansiedad. Es una herramienta de apoyo; si tu malestar es importante, consulta con un profesional.</p>
+      <ul>
+        <li><b>Música con modulación de amplitud (Enfoque).</b> Un estudio de 2024 en <i>Communications Biology</i> (Woods et al.) halló que la música con modulaciones rápidas apoyaba la atención sostenida y activaba redes atencionales, con diferencias según el nivel de dificultad atencional de cada persona. El estudio se hizo en colaboración con Brain.fm, y el efecto no fue igual en todas las condiciones. Es prometedor, no es una garantía.</li>
+        <li><b>Ruido blanco/rosa suave.</b> Un metaanálisis de 2024 (Nigg et al., <i>JAACAP</i>) encontró un beneficio pequeño pero significativo en jóvenes con TDAH, y un ligero empeoramiento en quienes no lo tienen. Mejor a volumen bajo. El <b>ruido marrón</b> es muy popular, pero casi todo lo que hay son testimonios, no estudios sólidos.</li>
+        <li><b>Binaurales.</b> Las revisiones muestran resultados contradictorios. Por eso están desactivados por defecto.</li>
+        <li><b>Respiración lenta (Calma).</b> Inhalar ~4 s y exhalar ~6 s (unas 6 respiraciones por minuto) es una técnica habitual para la relajación, con respaldo moderado.</li>
+        <li><b>Adaptación.</b> Las apps comerciales usan algoritmos propietarios y sensores. Aquí la adaptación es más sencilla y transparente: tu pulso, la hora y tus ajustes.</li>
+      </ul>
+      <p class="note" style="margin-bottom:0">Lo mejor es probarlo tú mismo: si tras unos días notas que te ayuda, genial; si no, no pasa nada.</p>
+    </div>
+  </details>
+
+  <footer>
+    Sosiego es software libre (MIT). Todo el sonido se genera en tu dispositivo: sin cuentas, sin rastreo, sin suscripción.<br>
+    No está afiliado a Brain.fm ni a Endel.
+  </footer>
+</main>
+<audio id="keep" playsinline hidden></audio>
+
+<script>
+(() => {
+'use strict';
+const $ = s => document.querySelector(s);
+const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
+
+/* ---------- Modos ---------- */
+const MODES = {
+  focus: { label:'Enfoque', desc:'Música suave con modulación rápida (16 Hz) y ruido marrón de fondo. Para tareas largas sin distraerte. El pulso guía casi no se oye aquí, a propósito.',
+           amRate:16, amDepth:.5, noise:'brown', noiseVol:.25, music:.8, cutoff:1600, chord:36, bells:0,   breath:false, bin:14,  bpm:70 },
+  calm:  { label:'Calma', desc:'Acordes lentos, campanitas suaves y una guía de respiración (inhala 4 s, exhala 6 s). Para bajar la ansiedad.',
+           amRate:10, amDepth:0,  noise:'pink',  noiseVol:.12, music:.85, cutoff:1200, chord:22, bells:1,   breath:true,  bin:10,  bpm:60 },
+  sleep: { label:'Dormir', desc:'Sonido muy grave y casi inmóvil, con ruido marrón envolvente. Se apaga solo con un fundido largo.',
+           amRate:6,  amDepth:0,  noise:'brown', noiseVol:.30, music:.45, cutoff:520,  chord:48, bells:.25, breath:false, bin:2.5, bpm:52 }
+};
+const CHORDS = [ // MIDI. Familia de La menor / Do mayor, siempre consonante
+  [45,52,57,60,64,71], // Am9
+  [41,53,57,60,64,67], // Fmaj9
+  [48,55,59,62,64,67], // Cmaj9
+  [43,50,55,59,62,69], // Gadd9
+  [40,47,52,55,59,62]  // Em7
+];
+const BELL_SCALE = [69,72,74,76,79,81,84]; // pentatónica menor de La
+const PERSIST = ['volume','minutes','binaural','timeAdapt','hrManual','mode'];
+const BIN_CARRIER = 170;
+
+const S = { mode:'focus', volume:.7, minutes:45, binaural:false, timeAdapt:true, hrManual:null, hrLive:null,
+            amRate:16, amDepth:.5, noise:'brown', noiseVol:.25, music:.8, cutoff:1600, chord:36, bells:0, breath:false };
+try { const sv = JSON.parse(localStorage.getItem('sosiego') || '{}'); PERSIST.forEach(k => { if (k in sv) S[k] = sv[k]; }); } catch(e){}
+const save = () => { try { localStorage.setItem('sosiego', JSON.stringify(Object.fromEntries(PERSIST.map(k => [k, S[k]])))); } catch(e){} };
+
+/* ---------- Motor de audio ---------- */
+let ctx = null, running = false, tickTimer = null, uiTimer = null;
+let master, fade, comp, analyser, padBus, filter, amGain, lfo, lfoDepth, breathGain, musicOut, bellBus, revSend, reverb;
+let noises = {}, bin = null;
+let nextChord = 0, nextBeat = 0, nextBreath = 0, breathT0 = 0, lastChordIdx = -1, lastBell = 0;
+let bpm = 60, startedAt = 0, endAt = 0, wakeLock = null, lastLive = 0;
+const IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+function makeIR(c, sec, decay){
+  const n = c.sampleRate * sec | 0, b = c.createBuffer(2, n, c.sampleRate);
+  for (let ch = 0; ch < 2; ch++){ const d = b.getChannelData(ch); for (let i = 0; i < n; i++) d[i] = (Math.random()*2-1) * Math.pow(1 - i/n, decay); }
+  return b;
+}
+function makeNoise(c, type){
+  const n = c.sampleRate * 8, b = c.createBuffer(2, n, c.sampleRate);
+  for (let ch = 0; ch < 2; ch++){
+    const d = b.getChannelData(ch); let last = 0, b0=0,b1=0,b2=0,b3=0,b4=0,b5=0,b6=0;
+    for (let i = 0; i < n; i++){
+      const w = Math.random()*2-1;
+      if (type === 'brown'){ last = (last + 0.02*w)/1.02; d[i] = last*3.5; }
+      else if (type === 'pink'){
+        b0=.99886*b0+w*.0555179; b1=.99332*b1+w*.0750759; b2=.969*b2+w*.153852; b3=.8665*b3+w*.3104856; b4=.55*b4+w*.5329522; b5=-.7616*b5-w*.016898;
+        d[i] = (b0+b1+b2+b3+b4+b5+b6+w*.5362)*.11; b6 = w*.115926;
+      } else d[i] = w*.35;
+    }
+    const N = 4096; // empalme del bucle sin clic
+    for (let i = 0; i < N; i++){ const a = i/N; d[n-N+i] = d[n-N+i]*(1-a) + d[i]*a; }
+  }
+  return b;
+}
+const bright = () => { if (!S.timeAdapt) return 1; const h = new Date().getHours();
+  return h>=6&&h<11 ? 1.15 : h>=11&&h<17 ? 1 : h>=17&&h<21 ? .85 : .68; };
+const midi = m => 440*Math.pow(2,(m-69)/12);
+
+async function start(){
+  const AC = window.AudioContext || window.webkitAudioContext;
+  ctx = new AC({ latencyHint:'playback' });
+  master = ctx.createGain(); fade = ctx.createGain(); comp = ctx.createDynamicsCompressor();
+  analyser = ctx.createAnalyser(); analyser.fftSize = 512;
+  master.connect(fade); fade.connect(comp); comp.connect(analyser);
+  let out = ctx.destination;
+  if (IOS){ // mantiene el audio con la pantalla bloqueada (experimental)
+    try { const d = ctx.createMediaStreamDestination(), el = $('#keep'); el.srcObject = d.stream; await el.play(); out = d; } catch(e){ out = ctx.destination; }
+  }
+  comp.connect(out);
+
+  reverb = ctx.createConvolver(); reverb.buffer = makeIR(ctx, 5, 2.4);
+  revSend = ctx.createGain(); revSend.gain.value = .55; revSend.connect(reverb); reverb.connect(master);
+
+  padBus = ctx.createGain(); filter = ctx.createBiquadFilter(); filter.type = 'lowpass'; filter.Q.value = .4;
+  amGain = ctx.createGain(); breathGain = ctx.createGain(); musicOut = ctx.createGain(); bellBus = ctx.createGain();
+  lfo = ctx.createOscillator(); lfo.type = 'sine'; lfoDepth = ctx.createGain();
+  lfo.connect(lfoDepth); lfoDepth.connect(amGain.gain); lfo.start();
+  padBus.connect(filter); filter.connect(amGain); amGain.connect(breathGain); breathGain.connect(musicOut);
+  bellBus.connect(musicOut);
+  musicOut.connect(master); musicOut.connect(revSend);
+
+  noises = {};
+  ['brown','pink','white'].forEach(t => {
+    const src = ctx.createBufferSource(); src.buffer = makeNoise(ctx, t); src.loop = true;
+    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = t==='white' ? 7000 : t==='pink' ? 9000 : 4000;
+    const g = ctx.createGain(); g.gain.value = 0;
+    src.connect(lp); lp.connect(g); g.connect(master); src.start(); noises[t] = { g };
+  });
+
+  const t = ctx.currentTime;
+  fade.gain.setValueAtTime(0, t); fade.gain.linearRampToValueAtTime(1, t + 5);
+  applyParams(true);
+  setBinaural(S.binaural);
+
+  startedAt = Date.now(); bpm = targetBpm();
+  nextChord = t + .1; nextBeat = t + 2; lastBell = 0; lastChordIdx = -1;
+  if (S.breath){ breathT0 = nextBreath = t + .3; } else nextBreath = Infinity;
+  running = true;
+  endAt = S.minutes ? startedAt + S.minutes*60000 : 0;
+  tickTimer = setInterval(tick, 150); tick();
+  uiTimer = setInterval(updateRemain, 500);
+  try { navigator.wakeLock && (wakeLock = await navigator.wakeLock.request('screen')); } catch(e){}
+  try { if ('mediaSession' in navigator){
+    navigator.mediaSession.metadata = new MediaMetadata({ title:'Sosiego · ' + MODES[S.mode].label, artist:'Sonido adaptativo' });
+    navigator.mediaSession.setActionHandler('pause', () => stop()); navigator.mediaSession.setActionHandler('play', () => toggle());
+  } } catch(e){}
+  await ctx.resume();
+  setPlayUI();
+}
+
+function stop(sec = 2.5){
+  if (!ctx) return;
+  const c = ctx, f = fade, t = c.currentTime;
+  clearInterval(tickTimer); clearInterval(uiTimer);
+  f.gain.cancelScheduledValues(t); f.gain.setValueAtTime(f.gain.value, t); f.gain.linearRampToValueAtTime(0, t + sec);
+  setTimeout(() => { try { c.close(); } catch(e){} }, sec*1000 + 300);
+  ctx = null; running = false; bin = null;
+  try { wakeLock && wakeLock.release(); } catch(e){} wakeLock = null;
+  try { $('#keep').pause(); } catch(e){}
+  setPlayUI(); $('#remain').textContent = '';
+}
+
+function applyParams(instant){
+  if (!ctx) return;
+  const t = ctx.currentTime, k = instant ? .01 : .15;
+  master.gain.setTargetAtTime(S.volume*.9, t, .1);
+  lfo.frequency.setTargetAtTime(S.amRate, t, k);
+  lfoDepth.gain.setTargetAtTime(S.amDepth/2, t, k);
+  amGain.gain.setTargetAtTime(1 - S.amDepth/2, t, k);
+  filter.frequency.setTargetAtTime(S.cutoff*bright(), t, instant ? .01 : .6);
+  musicOut.gain.setTargetAtTime(S.music, t, k);
+  for (const n in noises) noises[n].g.gain.setTargetAtTime(n === S.noise ? S.noiseVol : 0, t, .4);
+  if (bin) bin.oR.frequency.setTargetAtTime(BIN_CARRIER + MODES[S.mode].bin, t, .3);
+}
+
+function setBinaural(on){
+  if (!ctx) return;
+  if (on && !bin){
+    const mk = (f, pan) => { const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.value = f;
+      const p = ctx.createStereoPanner(); p.pan.value = pan; o.connect(p); return { o, p }; };
+    const g = ctx.createGain(); g.gain.value = 0;
+    const L = mk(BIN_CARRIER, -1), R = mk(BIN_CARRIER + MODES[S.mode].bin, 1);
+    L.p.connect(g); R.p.connect(g); g.connect(master); L.o.start(); R.o.start();
+    g.gain.setTargetAtTime(.05, ctx.currentTime, .8); bin = { oL:L.o, oR:R.o, g };
+  } else if (!on && bin){
+    const b = bin; bin = null; b.g.gain.setTargetAtTime(0, ctx.currentTime, .3);
+    const c = ctx; setTimeout(() => { try { b.oL.stop(); b.oR.stop(); } catch(e){} }, 1500);
+  }
+}
+
+function playChord(t){
+  const L = S.chord, att = Math.min(8, L*.3), rel = 9;
+  let idx; do { idx = Math.floor(Math.random()*CHORDS.length); } while (idx === lastChordIdx);
+  lastChordIdx = idx;
+  CHORDS[idx].forEach((m, i) => {
+    [['sine', -5, .03], ['triangle', 6, .017]].forEach(([type, det, peak]) => {
+      const o = ctx.createOscillator(); o.type = type; o.frequency.value = midi(m); o.detune.value = det + (Math.random()*4 - 2);
+      const g = ctx.createGain(), a = t + att + i*.4;
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(peak, a);
+      g.gain.setValueAtTime(peak, t + L); g.gain.linearRampToValueAtTime(0, t + L + rel);
+      o.connect(g); g.connect(padBus); o.start(t); o.stop(t + L + rel + .2);
+    });
+  });
+}
+
+function bell(t){
+  const f = midi(BELL_SCALE[Math.floor(Math.random()*BELL_SCALE.length)] + (Math.random() < .3 ? -12 : 0));
+  const o = ctx.createOscillator(), o2 = ctx.createOscillator(), g = ctx.createGain(), p = ctx.createStereoPanner();
+  o.type = o2.type = 'sine'; o.frequency.value = f; o2.frequency.value = f*2.001;
+  const g2 = ctx.createGain(); g2.gain.value = .22; o2.connect(g2); g2.connect(g);
+  o.connect(g); p.pan.value = Math.random()*1.2 - .6; g.connect(p); p.connect(bellBus);
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.05, t + .02); g.gain.setTargetAtTime(0, t + .02, 1.2);
+  o.start(t); o2.start(t); o.stop(t + 9); o2.stop(t + 9);
+}
+
+const hrNow = () => (S.hrLive && Date.now() - lastLive < 15000) ? S.hrLive : (S.hrManual || null);
+function targetBpm(){
+  const m = MODES[S.mode], hr = hrNow();
+  if (!hr) return m.bpm;
+  if (S.mode === 'focus') return clamp(hr, 50, 110);
+  const mins = (Date.now() - startedAt) / 60000, drift = Math.min(20, mins*1.5);
+  return clamp(hr - drift, S.mode === 'sleep' ? 44 : 50, 100);
+}
+
+function tick(){
+  if (!ctx || !running) return;
+  const now = ctx.currentTime, ahead = now + 2.5;
+  while (nextChord < ahead){ playChord(nextChord); nextChord += S.chord; }
+  while (nextBeat < ahead){
+    bpm += clamp(targetBpm() - bpm, -.7, .7);
+    if (S.bells > 0 && Math.random() < S.bells*.22 && nextBeat - lastBell > 2){ bell(nextBeat); lastBell = nextBeat; }
+    nextBeat += 60 / bpm;
+  }
+  while (nextBreath < ahead){
+    const g = breathGain.gain, t = nextBreath;
+    g.setValueAtTime(.6, t); g.linearRampToValueAtTime(1, t + 4); g.linearRampToValueAtTime(.6, t + 10);
+    nextBreath += 10;
+  }
+  if (endAt){
+    const left = endAt - Date.now();
+    if (left <= 20000 && !tick.fading){ tick.fading = true;
+      const t = ctx.currentTime; fade.gain.cancelScheduledValues(t); fade.gain.setValueAtTime(fade.gain.value, t); fade.gain.linearRampToValueAtTime(0, t + Math.max(1, left/1000)); }
+    if (left <= 0){ tick.fading = false; stop(.1); }
+  } else tick.fading = false;
+}
+
+function updateRemain(){
+  if (!running){ $('#remain').textContent = ''; return; }
+  if (!endAt){ $('#remain').textContent = 'sin límite'; return; }
+  const s = Math.max(0, Math.round((endAt - Date.now())/1000));
+  $('#remain').textContent = 'quedan ' + String(Math.floor(s/60)).padStart(2,'0') + ':' + String(s%60).padStart(2,'0');
+}
+
+/* ---------- Modos / UI ---------- */
+function loadMode(key, fromUser){
+  const m = MODES[key]; S.mode = key;
+  ['amRate','amDepth','noise','noiseVol','music','cutoff','chord','bells','breath'].forEach(k => S[k] = m[k]);
+  document.querySelectorAll('#modes button').forEach(b => b.setAttribute('aria-pressed', b.dataset.mode === key));
+  $('#modeDesc').textContent = m.desc;
+  syncSliders(); save();
+  if (ctx && running){
+    applyParams();
+    const t = ctx.currentTime, p = breathGain.gain;
+    p.cancelScheduledValues(t); p.setValueAtTime(p.value, t);
+    if (m.breath){ breathT0 = nextBreath = t + .3; } else { nextBreath = Infinity; p.setTargetAtTime(1, t + .01, .8); }
+    bpm = targetBpm();
+    try { navigator.mediaSession.metadata = new MediaMetadata({ title:'Sosiego · ' + m.label, artist:'Sonido adaptativo' }); } catch(e){}
+  }
+}
+function syncSliders(){
+  $('#vol').value = S.volume; $('#music').value = S.music; $('#noiseVol').value = S.noiseVol;
+  $('#noiseType').value = S.noise; $('#amDepth').value = S.amDepth; $('#amRate').value = S.amRate;
+  $('#binaural').checked = S.binaural; $('#timeAdapt').checked = S.timeAdapt;
+  const pc = v => Math.round(v*100) + '%', band = r => r < 8 ? 'theta' : r < 13 ? 'alfa' : 'beta';
+  $('#volO').textContent = pc(S.volume); $('#musicO').textContent = pc(S.music); $('#noiseVolO').textContent = pc(S.noiseVol/.6);
+  $('#amDepthO').textContent = S.amDepth ? pc(S.amDepth/.8) : 'apagada';
+  $('#amRateO').textContent = S.amRate + ' Hz · ' + band(S.amRate);
+  $('#hrIn').value = S.hrManual || '';
+}
+function setPlayUI(){ $('#play').textContent = running ? '❚❚ Pausar' : '▶ Empezar'; if (!running){ $('#orbMain').textContent = MODES[S.mode].label; $('#orbSub').textContent = 'toca Empezar'; } }
+async function toggle(){ if (running) stop(); else { try { await start(); } catch(e){ console.error(e); $('#orbSub').textContent = 'no se pudo iniciar el audio'; } } }
+
+function suggest(){
+  const h = new Date().getHours(), k = (h>=6&&h<17) ? 'focus' : (h>=17&&h<22) ? 'calm' : 'sleep';
+  document.querySelectorAll('#modes .sug').forEach(s => s.textContent = '');
+  const b = document.querySelector('#modes button[data-mode="' + k + '"] .sug'); if (b) b.textContent = 'sugerido ahora';
+}
+function updateRhythmInfo(){
+  const hr = hrNow(), el = $('#rhythmInfo');
+  el.textContent = hr ? ('Tu ritmo: ' + Math.round(hr) + ' lpm' + (running ? ' · pulso guía: ' + Math.round(bpm) + ' lpm' : '')) : 'Sin pulso indicado: se usa un ritmo estándar para cada modo.';
+}
+
+document.querySelectorAll('#modes button').forEach(b => b.addEventListener('click', () => loadMode(b.dataset.mode, true)));
+document.querySelectorAll('#dur button').forEach(b => b.addEventListener('click', () => {
+  S.minutes = +b.dataset.min; save(); markDur();
+  if (running){ endAt = S.minutes ? Date.now() + S.minutes*60000 : 0; }
+}));
+function markDur(){ document.querySelectorAll('#dur button').forEach(b => b.setAttribute('aria-pressed', +b.dataset.min === S.minutes)); }
+$('#play').addEventListener('click', toggle);
+[['vol','volume'],['music','music'],['noiseVol','noiseVol'],['amDepth','amDepth'],['amRate','amRate']].forEach(([id, key]) =>
+  $('#' + id).addEventListener('input', e => { S[key] = +e.target.value; syncSliders(); applyParams(); if (key === 'volume') save(); }));
+$('#noiseType').addEventListener('change', e => { S.noise = e.target.value; applyParams(); });
+$('#binaural').addEventListener('change', e => { S.binaural = e.target.checked; save(); setBinaural(S.binaural); });
+$('#timeAdapt').addEventListener('change', e => { S.timeAdapt = e.target.checked; save(); applyParams(); });
+$('#hrIn').addEventListener('change', e => { const v = +e.target.value; S.hrManual = v >= 40 && v <= 180 ? Math.round(v) : null; save(); syncSliders(); });
+
+let taps = [];
+$('#tap').addEventListener('click', () => {
+  const n = performance.now();
+  if (taps.length && n - taps[taps.length-1] > 2500) taps = [];
+  taps.push(n); taps = taps.slice(-8);
+  if (taps.length >= 4){
+    const iv = (taps[taps.length-1] - taps[0]) / (taps.length-1), v = Math.round(60000/iv);
+    if (v >= 40 && v <= 180){ S.hrManual = v; save(); syncSliders(); }
+  }
+});
+
+if (navigator.bluetooth){
+  $('#btRow').hidden = false; $('#btNote').hidden = false;
+  $('#btHr').addEventListener('click', async () => {
+    try {
+      $('#btState').textContent = 'buscando…';
+      const dev = await navigator.bluetooth.requestDevice({ filters:[{ services:['heart_rate'] }] });
+      const srv = await dev.gatt.connect(), svc = await srv.getPrimaryService('heart_rate');
+      const ch = await svc.getCharacteristic('heart_rate_measurement'); await ch.startNotifications();
+      ch.addEventListener('characteristicvaluechanged', e => {
+        const v = e.target.value, hr = (v.getUint8(0) & 1) ? v.getUint16(1, true) : v.getUint8(1);
+        if (hr >= 30 && hr <= 220){ S.hrLive = S.hrLive ? S.hrLive*.85 + hr*.15 : hr; lastLive = Date.now(); }
+      });
+      dev.addEventListener('gattserverdisconnected', () => { S.hrLive = null; $('#btState').textContent = 'desconectado'; });
+      $('#btState').textContent = 'conectado a ' + (dev.name || 'pulsómetro');
+    } catch(e){ $('#btState').textContent = 'no se pudo conectar'; }
+  });
+}
+
+/* ---------- Animación del orbe ---------- */
+const orb = $('#orb'); let lvl = 0, smooth = 0;
+const ease = p => .5 - .5*Math.cos(Math.PI*p);
+function frame(){
+  const T = performance.now()/1000; let scale, main = null, sub = null;
+  if (ctx && running){
+    const buf = frame.buf || (frame.buf = new Float32Array(512)); analyser.getFloatTimeDomainData(buf);
+    let s = 0; for (let i = 0; i < buf.length; i++) s += buf[i]*buf[i]; smooth += (Math.sqrt(s/buf.length) - smooth)*.1;
+    if (S.breath){
+      const ph = (((ctx.currentTime - breathT0) % 10) + 10) % 10;
+      if (ph < 4){ lvl = ease(ph/4); main = 'Inhala'; } else { lvl = 1 - ease((ph-4)/6); main = 'Exhala'; }
+      scale = .78 + .32*lvl;
+    } else scale = .9 + Math.sin(T*.5)*.03 + Math.min(.12, smooth*.8);
+    sub = Math.round(bpm) + ' lpm' + (S.amDepth > 0 ? ' · ' + S.amRate + ' Hz' : '');
+    $('#orbMain').textContent = main || MODES[S.mode].label; $('#orbSub').textContent = sub;
+  } else scale = .88 + Math.sin(T*.6)*.02;
+  orb.style.transform = 'scale(' + scale.toFixed(3) + ')';
+  requestAnimationFrame(frame);
+}
+
+document.addEventListener('visibilitychange', async () => {
+  if (document.visibilityState === 'visible' && running && !wakeLock){ try { wakeLock = await navigator.wakeLock.request('screen'); } catch(e){} }
+});
+setInterval(updateRhythmInfo, 1000);
+setInterval(suggest, 60000);
+
+/* ---------- Arranque ---------- */
+markDur(); loadMode(S.mode); suggest(); setPlayUI(); updateRhythmInfo(); requestAnimationFrame(frame);
+try { if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {}); } catch(e){}
+})();
+</script>
+</body>
+</html>
