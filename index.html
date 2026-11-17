@@ -67,15 +67,24 @@ a{color:var(--a)}
 .sheet .foot{display:flex;justify-content:space-between;margin-top:14px}
 .link{background:none;border:0;color:var(--mut);cursor:pointer;font-size:14px;padding:4px}
 .repeat{width:100%;margin-bottom:14px;text-align:left}
+.helpbtn{width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:var(--card);color:var(--mut);font-size:17px;cursor:pointer;flex:none;margin-top:2px}
+.helpbtn:hover{color:var(--txt);border-color:var(--a)}
+.help-sheet{max-height:85vh;overflow:auto;font-size:14.5px;color:#cfd6ee}
+.tabs{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+.tabs button{background:none;border:1px solid var(--line);color:var(--mut);border-radius:999px;padding:6px 12px;cursor:pointer;font-size:13.5px}
+.tabs button[aria-selected=true]{color:var(--txt);border-color:var(--a);background:rgba(127,214,200,.14)}
+.tabpane h3{font-size:14.5px;margin:10px 0 4px;color:var(--txt)}
+#whyLink{font-size:13px;text-decoration:underline;text-underline-offset:3px}
 @media (max-width:520px){.field{grid-template-columns:1fr 80px}.field label{grid-column:1/-1}}
 @media (prefers-reduced-motion:reduce){.orb{transition:none}}
 </style>
 </head>
 <body>
 <main>
-  <header>
-    <h1>Sosiego</h1>
-    <p class="sub">Sonido adaptativo para concentrarte, calmar la ansiedad y dormir. Libre, gratis, sin cuenta.</p>
+  <header style="display:flex;align-items:flex-start;gap:12px">
+    <div style="flex:1"><h1>Sosiego</h1>
+    <p class="sub">Sonido adaptativo para concentrarte, calmar la ansiedad y dormir. Libre, gratis, sin cuenta.</p></div>
+    <button class="helpbtn" id="helpBtn" aria-label="Ayuda y más información">?</button>
   </header>
 
   <section class="stage" aria-live="polite">
@@ -86,17 +95,17 @@ a{color:var(--a)}
   </section>
   <p class="track" id="trackName"></p>
   <p class="meta" id="trackMeta"></p>
+  <p style="text-align:center;margin:-8px 0 12px"><button class="link" id="whyLink" hidden>¿Por qué suena así?</button></p>
 
   <button class="play" id="play">▶ Empezar</button>
   <div class="row">
     <button class="btn" id="next" title="Genera una pista nueva con tus mismas respuestas">⟳ Otra pista</button>
     <button class="btn" id="ask">Cambiar respuestas</button>
-    <button class="btn" id="like" title="Sosiego te pondrá más sonidos de este tipo">👍 Me ayuda</button>
-    <button class="btn" id="dislike" title="Pasa a otra pista y te pondrá menos de este tipo">👎 No me va</button>
+    <button class="btn" id="like" title="Me ayuda: te pondrá más sonidos de este tipo" aria-label="Me ayuda">👍</button>
+    <button class="btn" id="dislike" title="No me va: pasa a otra pista y te pondrá menos de este tipo" aria-label="No me va">👎</button>
   </div>
 
   <div class="field" id="fxRow" style="margin:0 0 12px"><label for="fx"><b>Efecto</b> (modulación)</label><input type="range" id="fx" min="0" max=".85" step=".01"><output id="fxO"></output></div>
-  <div id="guide" class="card" hidden style="background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px 16px;margin:0 0 14px;font-size:14px;color:#cfd6ee"></div>
   <input type="text" id="taskIn" maxlength="80" placeholder="¿En qué te vas a centrar? (opcional)" style="width:100%;margin:0 0 12px;background:#0f1630;color:var(--txt);border:1px solid var(--line);border-radius:12px;padding:11px 13px;font-size:15px">
   <div class="chips" id="dur">
     <span class="l">Sesión</span>
@@ -127,19 +136,6 @@ a{color:var(--a)}
   </details>
 
 
-  <details class="card">
-    <summary>Qué dice la ciencia (y qué no) <span class="tag">honestidad</span></summary>
-    <div class="body">
-      <p class="warn" style="margin-top:0"><b>Sosiego no es un tratamiento médico.</b> No cura el TDAH ni la ansiedad. Es una herramienta de apoyo; si tu malestar es importante, consulta con un profesional.</p>
-      <ul>
-        <li><b>Música con modulación de amplitud (Enfoque).</b> Un estudio de 2024 en <i>Communications Biology</i> (Woods et al.) halló que la música con modulaciones rápidas apoyaba la atención sostenida y activaba redes atencionales, con diferencias según el nivel de dificultad atencional. Se hizo en colaboración con Brain.fm y el efecto no fue igual en todas las condiciones.</li>
-        <li><b>Ruido blanco/rosa suave.</b> Un metaanálisis de 2024 (Nigg et al., <i>JAACAP</i>) encontró un beneficio pequeño en jóvenes con TDAH y un ligero empeoramiento en quienes no lo tienen. El ruido marrón es popular pero la evidencia es sobre todo anecdótica.</li>
-        <li><b>Binaurales.</b> Resultados contradictorios; desactivados por defecto.</li>
-        <li><b>Respiración lenta (Calma).</b> Inhalar ~4 s y exhalar ~6 s es una técnica habitual de relajación.</li>
-        <li><b>Variedad.</b> Cada pista se genera al momento (tonalidad, acordes, instrumentos, ritmo) y va cambiando por secciones, para que no canse. Tus 👍/👎 se guardan solo en tu dispositivo.</li>
-      </ul>
-    </div>
-  </details>
 
   <details class="card">
     <summary>Pulso cardiaco <span class="tag">opcional</span></summary>
@@ -173,6 +169,39 @@ a{color:var(--a)}
     <div class="step" id="qStep"></div>
     <div class="opts" id="qOpts"></div>
     <div class="foot"><button class="link" id="qBack">← Atrás</button><button class="link" id="qClose">Cerrar</button></div>
+  </div>
+</div>
+<div class="modal" id="help" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+  <div class="sheet help-sheet">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <h2 id="helpTitle">Ayuda</h2><button class="link" id="helpClose" aria-label="Cerrar">✕</button>
+    </div>
+    <div class="tabs" role="tablist">
+      <button role="tab" data-tab="why" aria-selected="true">Por qué suena así</button>
+      <button role="tab" data-tab="tips" aria-selected="false">Cómo usarla</button>
+      <button role="tab" data-tab="sci" aria-selected="false">La ciencia</button>
+    </div>
+    <div class="tabpane" data-pane="why" id="helpGuide"></div>
+    <div class="tabpane" data-pane="tips" hidden>
+      <ul>
+        <li><b>Volumen bajo:</b> el sonido debe quedar de fondo, no ocupar tu atención.</li>
+        <li><b>Auriculares</b> si puedes: el movimiento espacial y la modulación se perciben mejor.</li>
+        <li><b>Efecto:</b> súbelo si a los 5 minutos no notas nada; bájalo si zumba o cansa.</li>
+        <li><b>⟳ Otra pista</b> si un sonido no te convence. Con 👍 / 👎, «Sorpréndeme» aprende lo que te va.</li>
+        <li><b>Ajustes:</b> puedes cambiar el tipo de ruido (marrón, rosa, blanco) o quitarlo.</li>
+        <li>Dale varios días: a cada persona le funciona una combinación distinta.</li>
+      </ul>
+    </div>
+    <div class="tabpane" data-pane="sci" hidden>
+      <p class="warn" style="margin-top:0"><b>Sosiego no es un tratamiento médico.</b> No cura el TDAH ni la ansiedad. Es una herramienta de apoyo; si tu malestar es importante, consulta con un profesional.</p>
+      <ul>
+        <li><b>Música con modulación de amplitud (Enfoque).</b> Un estudio de 2024 en <i>Communications Biology</i> (Woods et al.) halló que la música con modulaciones rápidas apoyaba la atención sostenida y activaba redes atencionales, con diferencias según el nivel de dificultad atencional. Se hizo en colaboración con Brain.fm y el efecto no fue igual en todas las condiciones.</li>
+        <li><b>Ruido blanco/rosa suave.</b> Un metaanálisis de 2024 (Nigg et al., <i>JAACAP</i>) encontró un beneficio pequeño en jóvenes con TDAH y un ligero empeoramiento en quienes no lo tienen. El ruido marrón es popular pero la evidencia es sobre todo anecdótica.</li>
+        <li><b>Binaurales.</b> Resultados contradictorios; desactivados por defecto.</li>
+        <li><b>Respiración lenta (Calma).</b> Inhalar ~4 s y exhalar ~6 s es una técnica habitual de relajación.</li>
+        <li><b>Variedad.</b> Cada pista se genera al momento (tonalidad, acordes, instrumentos, ritmo) y va cambiando por secciones, para que no canse. Tus 👍/👎 se guardan solo en tu dispositivo.</li>
+      </ul>
+    </div>
   </div>
 </div>
 <audio id="keep" playsinline hidden></audio>
@@ -565,7 +594,7 @@ function stop(secs = 2.5){
   ctx = null; running = false; bin = null; cur = null; pomo = null;
   try { wakeLock && wakeLock.release(); } catch(e){} wakeLock = null;
   try { $('#keep').pause(); } catch(e){}
-  setPlayUI(); $('#remain').textContent = ''; $('#guide').hidden = true;
+  setPlayUI(); $('#remain').textContent = ''; showGuide();
 }
 function setTimer(){
   if (S.minutes === -1){ endAt = 0; pomo = { phase:'focus', until: Date.now() + 25*60000, round:1 }; }
@@ -590,7 +619,8 @@ function showTrack(){
 const PAL_NAME = { calido:'cálido', cristal:'cristal', naturaleza:'naturaleza', electronico:'electrónico', cinematico:'cinematográfico' };
 const NOISE_NAME = { none:'ninguno', brown:'marrón', pink:'rosa', white:'blanco' };
 function showGuide(){
-  const g = $('#guide'), p = S.profile; if (!T || !p){ g.hidden = true; return; }
+  const g = $('#helpGuide'), p = S.profile;
+  if (!T || !p){ g.innerHTML = '<p class="note">Empieza una sesión y aquí verás qué ha elegido Sosiego según tus respuestas, y por qué.</p>'; $('#whyLink').hidden = true; return; }
   const why = [];
   if (T.mode === 'focus'){
     why.push('Modulación a ' + T.amRate + ' Hz al ' + Math.round(T.amDepth/.85*100) + ' %' + (p.intensity ? ' (intensidad ' + p.intensity + ')' : '') + '; empieza suave y sube en 2–3 minutos.');
@@ -598,10 +628,9 @@ function showGuide(){
     if (T.melProb < .1) why.push('Poca melodía, para que no te «enganche» la música.');
   } else why.push(T.breath === 'box' ? 'Respiración cuadrada 4–4–4–4: sigue el orbe.' : T.breath ? 'Respiración 4–6 (exhalar más largo calma): sigue el orbe.' : 'Sonido grave y casi inmóvil, sin modulación, que se apaga solo.');
   why.push(T.nature ? 'Paisaje de ' + T.nature + ' en lugar de ruido.' : 'Ruido ' + NOISE_NAME[T.noise] + ' de fondo' + (T.noise === 'pink' ? ' (el rosa/blanco es el que tiene más estudios en TDAH)' : ' (más suave y envolvente)') + '.');
-  const can = ['<b>Efecto</b>: súbelo si no notas nada, bájalo si cansa o zumba.', '<b>⟳ Otra pista</b> si este sonido no te convence; 👍/👎 enseñan a «Sorpréndeme».', '<b>Ajustes</b>: cambia el tipo de ruido (marrón, rosa, blanco) o quítalo.'];
-  g.innerHTML = '<div style="font-weight:600;margin-bottom:4px">Por qué suena así</div><ul style="margin:0 0 8px">' + why.map(x => '<li>' + x + '</li>').join('') +
-    '</ul><div style="font-weight:600;margin-bottom:4px">Puedes cambiar</div><ul style="margin:0">' + can.map(x => '<li>' + x + '</li>').join('') + '</ul>';
-  g.hidden = false;
+  g.innerHTML = '<p style="margin:0 0 6px">Tus respuestas: <b>' + profileText(p) + '</b>. Pista «' + T.name + '».</p><ul>' + why.map(x => '<li>' + x + '</li>').join('') + '</ul>' +
+    '<p class="note" style="margin-bottom:0">Dentro de una sesión el sonido cambia muy poco, para no distraerte. La variedad está entre pistas: cada una es distinta y no se repiten.</p>';
+  $('#whyLink').hidden = false;
 }
 function syncSliders(){
   $('#vol').value = S.volume; $('#music').value = S.music; $('#noiseVol').value = S.noiseVol; $('#natureVol').value = S.natureVol;
@@ -659,8 +688,17 @@ async function finish(p){ try { if (running) nextTrack(p); else await start(p); 
 $('#repeat').addEventListener('click', () => { $('#modal').classList.remove('open'); finish({ ...S.profile }); });
 $('#qBack').addEventListener('click', () => { if (qIdx){ qIdx--; renderQ(); } });
 $('#qClose').addEventListener('click', () => $('#modal').classList.remove('open'));
-document.addEventListener('keydown', e => { if (e.key === 'Escape') $('#modal').classList.remove('open'); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape'){ $('#modal').classList.remove('open'); $('#help').classList.remove('open'); } });
 
+function openHelp(tab){
+  showGuide(); $$('.tabs button').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === tab));
+  $$('.tabpane').forEach(p => p.hidden = p.dataset.pane !== tab); $('#help').classList.add('open');
+}
+$('#helpBtn').addEventListener('click', () => openHelp(running ? 'why' : 'tips'));
+$('#whyLink').addEventListener('click', () => openHelp('why'));
+$('#helpClose').addEventListener('click', () => $('#help').classList.remove('open'));
+$('#help').addEventListener('click', e => { if (e.target.id === 'help') $('#help').classList.remove('open'); });
+$$('.tabs button').forEach(b => b.addEventListener('click', () => openHelp(b.dataset.tab)));
 $('#play').addEventListener('click', () => running ? stop() : openQuestions());
 $('#ask').addEventListener('click', openQuestions);
 $('#next').addEventListener('click', () => nextTrack());
