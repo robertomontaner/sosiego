@@ -1,5 +1,5 @@
 // Service worker mínimo: guarda la app en caché para que funcione sin conexión.
-const CACHE = 'sosiego-v2';
+const CACHE = 'sosiego-v3';
 const FILES = ['./', './index.html', './manifest.json', './icon.svg'];
 
 self.addEventListener('install', e => {

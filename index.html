@@ -95,6 +95,8 @@ a{color:var(--a)}
     <button class="btn" id="dislike" title="Pasa a otra pista y te pondrá menos de este tipo">👎 No me va</button>
   </div>
 
+  <div class="field" id="fxRow" style="margin:0 0 12px"><label for="fx"><b>Efecto</b> (modulación)</label><input type="range" id="fx" min="0" max=".85" step=".01"><output id="fxO"></output></div>
+  <div id="guide" class="card" hidden style="background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px 16px;margin:0 0 14px;font-size:14px;color:#cfd6ee"></div>
   <input type="text" id="taskIn" maxlength="80" placeholder="¿En qué te vas a centrar? (opcional)" style="width:100%;margin:0 0 12px;background:#0f1630;color:var(--txt);border:1px solid var(--line);border-radius:12px;padding:11px 13px;font-size:15px">
   <div class="chips" id="dur">
     <span class="l">Sesión</span>
@@ -219,12 +221,12 @@ function weightedPalette(r){
 }
 function makeTrack(p, seed){
   const r = rngFrom(seed), pick = a => choose(a, r), mode = modeOf(p.activity);
-  const pal = p.palette === 'sorpresa' ? weightedPalette(r) : p.palette;
+  const pal = p.palette === 'sorpresa' ? weightedPalette(r) : p.palette, f = p.feeling;
   const T = { seed, mode, pal, name: pick(N1) + ' de ' + pick(N2) };
   T.root = 48 + Math.floor(r() * 8);
   T.scale = SCALES[pick(mode === 'sleep' ? ['aeolian','dorian','lydian'] : mode === 'calm' ? ['ionian','lydian','dorian','mixo'] : ['dorian','lydian','ionian','mixo','aeolian'])];
   T.prog = pick(PROGS);
-  if (mode === 'focus') T.tempo = 100 + r()*18 + (p.feeling === 'cansado' ? 8 : 0) - (p.feeling === 'ansioso' ? 12 : 0) - (p.activity === 'leer' ? 10 : 0);
+  if (mode === 'focus') T.tempo = 100 + r()*12 + (p.feeling === 'cansado' ? 10 : 0) - (p.feeling === 'ansioso' ? 14 : 0) - (p.activity === 'leer' ? 10 : 0);
   else T.tempo = mode === 'calm' ? 56 + r()*8 : 48 + r()*6;
   const h = new Date().getHours(), lowPhase = (h >= 14 && h < 16) || h >= 21 || h < 7;   // bajones del ritmo circadiano
   if (mode === 'focus' && lowPhase) T.tempo -= 4;
@@ -234,20 +236,28 @@ function makeTrack(p, seed){
   if (mode === 'focus' && lowPhase) T.amDepth *= .85;
   T.amRate = 16;
   T.cutoff = mode === 'focus' ? (p.feeling === 'cansado' ? 2600 : p.feeling === 'ansioso' ? 1500 : 2000) : mode === 'calm' ? 1300 : 650;
-  T.padTimbre = pal === 'cristal' ? 'glass' : (pal === 'calido' || pal === 'electronico') ? pick(['warm','soft']) : 'soft';
-  T.arp = mode === 'focus' && pal !== 'naturaleza' ? (pal === 'electronico' ? pick([1,2]) : 2) : 0;   // pasos entre notas (1 = semicorcheas)
+  T.padTimbre = pal === 'cristal' ? 'glass' : pal === 'cinematico' ? 'strings' : (pal === 'calido' || pal === 'electronico') ? pick(['warm','soft']) : 'soft';
+  if (f === 'ansioso' && T.padTimbre === 'warm') T.padTimbre = 'soft';
+  // ritmo: pasos entre notas del arpegio (1 = semicorcheas, 2 = corcheas, 4 = negras)
+  T.arp = mode === 'focus' && pal !== 'naturaleza' ? (pal === 'electronico' ? pick([1,2]) : 2) : 0;
+  if (T.arp && f === 'disperso') T.arp = pal === 'electronico' ? 1 : 2;   // más pulso constante que "agarre" la atención
+  if (T.arp && f === 'cansado') T.arp = Math.max(1, T.arp === 2 && pal === 'electronico' ? 1 : T.arp);
+  if (T.arp && f === 'ansioso') T.arp = 4;                                  // menos notas, menos activación
   if (p.activity === 'leer' && T.arp) T.arp = 4;
-  T.arpVoice = pal === 'cristal' ? 'marimba' : pal === 'calido' ? 'keys' : 'pluck';
-  T.arpPat = pick(['up','updown','rand','alberti']);
-  T.bass = mode === 'focus' ? pick([4,8]) : 0;
-  T.thump = mode === 'focus' && p.activity !== 'leer' && (pal === 'electronico' || (pal === 'naturaleza' && r() < .5));
-  T.melVoice = pal === 'cristal' ? pick(['bell','marimba']) : pal === 'calido' ? 'keys' : pal === 'electronico' ? 'pluck' : 'bell';
+  T.arpVoice = pal === 'cristal' ? 'marimba' : (pal === 'calido' || pal === 'cinematico') ? 'keys' : 'pluck';
+  T.arpPat = pal === 'cinematico' ? pick(['up','alberti']) : pick(['up','updown','rand','alberti']);
+  T.bass = mode === 'focus' ? (f === 'disperso' ? 4 : f === 'ansioso' ? 8 : pick([4,8])) : 0;
+  T.thump = mode === 'focus' && p.activity !== 'leer' && f !== 'ansioso' && (pal === 'electronico' || (pal === 'naturaleza' && (f === 'disperso' || r() < .5)));
+  T.melVoice = pal === 'cristal' ? pick(['bell','marimba']) : (pal === 'calido' || pal === 'cinematico') ? 'keys' : pal === 'electronico' ? 'pluck' : 'bell';
   T.melProb = mode === 'sleep' ? .05 : mode === 'calm' ? .2 : p.activity === 'crear' ? .35 : p.activity === 'leer' ? 0 : .12;
-  T.nature = pal === 'naturaleza' ? pick(['lluvia','mar','viento']) : (mode === 'sleep' && r() < .35 ? pick(['lluvia','mar']) : null);
-  T.noise = T.nature ? 'none' : mode === 'calm' ? 'pink' : 'brown';
-  T.noiseVol = T.nature ? 0 : mode === 'focus' ? .2 : mode === 'calm' ? .1 : .28;
+  T.melProb *= f === 'disperso' && mode === 'focus' ? .6 : f === 'ansioso' ? .6 : f === 'cansado' ? 1.3 : 1;   // disperso: menos melodía que distraiga
+  T.nature = pal === 'naturaleza' ? pick(['lluvia','mar','viento']) : ((mode === 'sleep' || (mode === 'calm' && f === 'ansioso')) && r() < .4 ? pick(['lluvia','mar']) : null);
+  // ruido: la evidencia es sobre todo para ruido rosa/blanco en TDAH; el marrón es más suave y envolvente
+  T.noise = T.nature ? 'none' : mode === 'focus' ? ({ disperso:'pink', cansado:'pink', ansioso:'brown', bien:'brown' })[f] : mode === 'calm' ? (f === 'ansioso' ? 'brown' : 'pink') : 'brown';
+  T.noiseVol = T.nature ? 0 : mode === 'focus' ? (f === 'disperso' ? .24 : f === 'ansioso' ? .16 : .2) : mode === 'calm' ? .1 : .28;
+  if (T.noise === 'pink' && mode === 'focus') T.noiseVol *= .75;   // el rosa se oye más a igual nivel
   T.music = mode === 'sleep' ? .5 : .85;
-  T.breath = mode === 'calm' ? (p.activity === 'meditar' ? 'box' : '46') : null;
+  T.breath = mode === 'calm' ? (p.activity === 'meditar' && f !== 'ansioso' ? 'box' : '46') : null;
   return T;
 }
 
@@ -302,7 +312,7 @@ async function initAudio(){
   ['brown','pink','white'].forEach(t => {
     const src = ctx.createBufferSource(); src.buffer = NB[t]; src.loop = true;
     const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = t==='white' ? 7000 : t==='pink' ? 9000 : 4000;
-    const g = ctx.createGain(); g.gain.value = 0; src.connect(lp); lp.connect(g); g.connect(master); src.start(); noises[t] = { g };
+    const g = ctx.createGain(); g.gain.value = 0; src.connect(lp); lp.connect(g); g.connect(master); src.start(); noises[t] = { g, lp, base: lp.frequency.value };
   });
 }
 
@@ -346,7 +356,9 @@ function panned(dest, pan){ const p = ctx.createStereoPanner(); p.pan.value = pa
 function pad(t, notes, dur, timbre, dest){
   const att = Math.min(6, dur*.35), rel = Math.min(10, dur*.6 + 3);
   const layers = timbre === 'warm' ? [['sawtooth',-7,.006],['sawtooth',7,.006],['sine',0,.016]]
-               : timbre === 'glass' ? [['sine',0,.022],['sine',1200,.005]] : [['sine',-5,.02],['triangle',6,.012]];
+               : timbre === 'glass' ? [['sine',0,.022],['sine',1200,.005]]
+               : timbre === 'strings' ? [['sawtooth',-11,.0045],['sawtooth',0,.0045],['sawtooth',11,.0045],['triangle',0,.01]]
+               : [['sine',-5,.02],['triangle',6,.012]];
   notes.forEach((m, i) => layers.forEach(([type, det, pk]) => {
     const o = ctx.createOscillator(), g = ctx.createGain(), a = t + att + i*.3;
     o.type = type; o.frequency.value = midi(m); o.detune.value = det + rnd(-3, 3); pk *= i === 0 ? 1.2 : 1;
@@ -363,16 +375,16 @@ function keys(t, m, v, dest){ // piano eléctrico por FM
 }
 function marimba(t, m, v, dest){
   const f = midi(m), o = ctx.createOscillator(), o2 = ctx.createOscillator(), g = ctx.createGain(), g2 = ctx.createGain();
-  o.frequency.value = f; o2.frequency.value = f*3.98; g2.gain.setValueAtTime(.3, t); g2.gain.setTargetAtTime(0, t, .04);
+  o.frequency.value = f; o2.frequency.value = f*3.98; g2.gain.setValueAtTime(.18, t); g2.gain.setTargetAtTime(0, t, .04);
   o2.connect(g2); g2.connect(g); o.connect(g); g.connect(panned(dest, rnd(-.6, .6)));
   g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.05*v, t + .004); g.gain.setTargetAtTime(0, t + .005, .3);
   o.start(t); o2.start(t); o.stop(t + 2.5); o2.stop(t + 2.5);
 }
 function pluck(t, m, v, dest){
   const o = ctx.createOscillator(), lp = ctx.createBiquadFilter(), g = ctx.createGain();
-  o.type = 'sawtooth'; o.frequency.value = midi(m); lp.type = 'lowpass'; lp.Q.value = 2;
-  lp.frequency.setValueAtTime(2600, t); lp.frequency.setTargetAtTime(380, t, .07);
-  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.024*v, t + .004); g.gain.setTargetAtTime(0, t + .005, .16);
+  o.type = 'sawtooth'; o.frequency.value = midi(m); lp.type = 'lowpass'; lp.Q.value = .9;
+  lp.frequency.setValueAtTime(1700, t); lp.frequency.setTargetAtTime(350, t, .06);
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.018*v, t + .006); g.gain.setTargetAtTime(0, t + .005, .16);
   o.connect(lp); lp.connect(g); g.connect(panned(dest, rnd(-.4, .4))); o.start(t); o.stop(t + 1.5);
 }
 function bell(t, m, v, dest){
@@ -390,15 +402,15 @@ function bass(t, m, dur, dest){
   });
 }
 function thump(t, v, dest){
-  const o = ctx.createOscillator(), g = ctx.createGain();
-  o.frequency.setValueAtTime(110, t); o.frequency.exponentialRampToValueAtTime(46, t + .12);
-  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.11*v, t + .005); g.gain.setTargetAtTime(0, t + .01, .09);
-  o.connect(g); g.connect(dest); o.start(t); o.stop(t + .6);
+  const o = ctx.createOscillator(), g = ctx.createGain(), lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 180;
+  o.frequency.setValueAtTime(90, t); o.frequency.exponentialRampToValueAtTime(45, t + .12);
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.06*v, t + .012); g.gain.setTargetAtTime(0, t + .015, .08);
+  o.connect(lp); lp.connect(g); g.connect(dest); o.start(t); o.stop(t + .6);
 }
 function drop(t, dest){
   const s = ctx.createBufferSource(), bp = ctx.createBiquadFilter(), g = ctx.createGain();
-  s.buffer = NB.white; bp.type = 'bandpass'; bp.frequency.value = rnd(1500, 5500); bp.Q.value = 7;
-  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(rnd(.04, .14), t + .002); g.gain.setTargetAtTime(0, t + .003, .015);
+  s.buffer = NB.white; bp.type = 'bandpass'; bp.frequency.value = rnd(1200, 4000); bp.Q.value = 4;
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(rnd(.015, .06), t + .004); g.gain.setTargetAtTime(0, t + .005, .025);
   s.connect(bp); bp.connect(g); g.connect(panned(dest, rnd(-.9, .9))); s.start(t, rnd(0, 7), .2);
 }
 function startNature(kind, dest){
@@ -448,7 +460,7 @@ function startTrack(p, seed){
   bpm = T.mode === 'focus' ? T.tempo : targetBpm();
   const bg = breathGain.gain; bg.cancelScheduledValues(t); bg.setValueAtTime(bg.value, t);
   if (T.breath){ breathT0 = clock.nextBreath = t + .3; } else { clock.nextBreath = Infinity; bg.setTargetAtTime(1, t, .8); }
-  showTrack();
+  showTrack(); showGuide();
   try { navigator.mediaSession.metadata = new MediaMetadata({ title:T.name, artist:'Sosiego · ' + MODE_LABEL[T.mode] }); } catch(e){}
 }
 const chordAt = t => { let d = 0; for (const c of clock.chords) if (c.t <= t + .001) d = c.d; return d; };
@@ -501,6 +513,10 @@ function tick(){
     else { g.setValueAtTime(.6, t); g.linearRampToValueAtTime(1, t + 4); g.linearRampToValueAtTime(.6, t + 10); clock.nextBreath += 10; }
   }
   if (Date.now() - lastArc > 3000){ lastArc = Date.now(); applyParams(); }
+  if (now >= (clock.nextDrift || 0)){   // el ruido varía despacio de nivel y color para no ser monótono
+    const n = noises[S.noise]; if (n){ n.g.gain.setTargetAtTime(S.noiseVol * rnd(.8, 1.1), now, 4); n.lp.frequency.setTargetAtTime(n.base * rnd(.6, 1.1), now, 5); }
+    clock.nextDrift = now + rnd(8, 16);
+  }
   if (pomo && Date.now() >= pomo.until) pomoSwitch();
   if (endAt){
     const left = endAt - Date.now();
@@ -530,7 +546,7 @@ function stop(secs = 2.5){
   ctx = null; running = false; bin = null; cur = null; pomo = null;
   try { wakeLock && wakeLock.release(); } catch(e){} wakeLock = null;
   try { $('#keep').pause(); } catch(e){}
-  setPlayUI(); $('#remain').textContent = '';
+  setPlayUI(); $('#remain').textContent = ''; $('#guide').hidden = true;
 }
 function setTimer(){
   if (S.minutes === -1){ endAt = 0; pomo = { phase:'focus', until: Date.now() + 25*60000, round:1 }; }
@@ -549,12 +565,29 @@ function nextTrack(p){ if (!S.profile && !p) return openQuestions(); if (p){ S.p
 function profileText(p){ return [LABEL[p.activity], LABEL[p.feeling], LABEL[p.palette], p.intensity && isFocus(p.activity) ? 'intensidad ' + p.intensity : ''].filter(Boolean).join(' · '); }
 function showTrack(){
   $('#trackName').textContent = T ? T.name : '';
-  const palName = { calido:'cálido', cristal:'cristal', naturaleza:'naturaleza', electronico:'electrónico' }[T.pal];
+  const palName = PAL_NAME[T.pal];
   $('#trackMeta').textContent = (pomo && pomo.phase === 'break' ? 'Descanso: levántate, estira, bebe agua · ' : S.task ? '«' + S.task + '» · ' : '') + MODE_LABEL[T.mode] + ' · ' + palName + (T.nature ? ' (' + T.nature + ')' : '');
+}
+const PAL_NAME = { calido:'cálido', cristal:'cristal', naturaleza:'naturaleza', electronico:'electrónico', cinematico:'cinematográfico' };
+const NOISE_NAME = { none:'ninguno', brown:'marrón', pink:'rosa', white:'blanco' };
+function showGuide(){
+  const g = $('#guide'), p = S.profile; if (!T || !p){ g.hidden = true; return; }
+  const why = [];
+  if (T.mode === 'focus'){
+    why.push('Modulación a ' + T.amRate + ' Hz al ' + Math.round(T.amDepth/.85*100) + ' %' + (p.intensity ? ' (intensidad ' + p.intensity + ')' : '') + '; empieza suave y sube en 2–3 minutos.');
+    why.push(T.arp ? 'Pulso ' + (T.arp === 1 ? 'denso' : T.arp === 2 ? 'constante' : 'tranquilo') + ' a ' + T.tempo + ' lpm' + (p.feeling === 'disperso' ? ', pensado para sujetar la atención' : p.feeling === 'ansioso' ? ', más lento para no activarte de más' : p.feeling === 'cansado' ? ', algo más rápido y brillante para activarte' : '') + '.' : 'Sin arpegio: fondo estable para no competir con la lectura.');
+    if (T.melProb < .1) why.push('Poca melodía, para que no te «enganche» la música.');
+  } else why.push(T.breath === 'box' ? 'Respiración cuadrada 4–4–4–4: sigue el orbe.' : T.breath ? 'Respiración 4–6 (exhalar más largo calma): sigue el orbe.' : 'Sonido grave y casi inmóvil, sin modulación, que se apaga solo.');
+  why.push(T.nature ? 'Paisaje de ' + T.nature + ' en lugar de ruido.' : 'Ruido ' + NOISE_NAME[T.noise] + ' de fondo' + (T.noise === 'pink' ? ' (el rosa/blanco es el que tiene más estudios en TDAH)' : ' (más suave y envolvente)') + '.');
+  const can = ['<b>Efecto</b>: súbelo si no notas nada, bájalo si cansa o zumba.', '<b>⟳ Otra pista</b> si este sonido no te convence; 👍/👎 enseñan a «Sorpréndeme».', '<b>Ajustes</b>: cambia el tipo de ruido (marrón, rosa, blanco) o quítalo.'];
+  g.innerHTML = '<div style="font-weight:600;margin-bottom:4px">Por qué suena así</div><ul style="margin:0 0 8px">' + why.map(x => '<li>' + x + '</li>').join('') +
+    '</ul><div style="font-weight:600;margin-bottom:4px">Puedes cambiar</div><ul style="margin:0">' + can.map(x => '<li>' + x + '</li>').join('') + '</ul>';
+  g.hidden = false;
 }
 function syncSliders(){
   $('#vol').value = S.volume; $('#music').value = S.music; $('#noiseVol').value = S.noiseVol; $('#natureVol').value = S.natureVol;
-  $('#noiseType').value = S.noise; $('#amDepth').value = S.amDepth; $('#amRate').value = S.amRate;
+  $('#noiseType').value = S.noise; $('#amDepth').value = S.amDepth; $('#fx').value = S.amDepth;
+  $('#fxO').textContent = S.amDepth ? Math.round(S.amDepth/.85*100) + '%' : 'apagado'; $('#amRate').value = S.amRate;
   $('#binaural').checked = S.binaural; $('#timeAdapt').checked = S.timeAdapt; $('#spatial').checked = S.spatial; $('#taskIn').value = S.task || '';
   const pc = v => Math.round(v*100) + '%', band = r => r < 8 ? 'theta' : r < 13 ? 'alfa' : 'beta';
   $('#volO').textContent = pc(S.volume); $('#musicO').textContent = pc(S.music); $('#noiseVolO').textContent = pc(S.noiseVol/.6); $('#natureVolO').textContent = pc(S.natureVol);
@@ -621,7 +654,7 @@ $('#like').addEventListener('click', () => rate(1));
 $('#dislike').addEventListener('click', () => rate(-1));
 $$('#dur button').forEach(b => b.addEventListener('click', () => { S.minutes = +b.dataset.min; save(); markDur(); if (running){ setTimer(); tick.fading = false; fade.gain.cancelScheduledValues(ctx.currentTime); fade.gain.setTargetAtTime(1, ctx.currentTime, .5); } }));
 function markDur(){ $$('#dur button').forEach(b => b.setAttribute('aria-pressed', +b.dataset.min === S.minutes)); }
-[['vol','volume'],['music','music'],['noiseVol','noiseVol'],['natureVol','natureVol'],['amDepth','amDepth'],['amRate','amRate']].forEach(([id, key]) =>
+[['vol','volume'],['music','music'],['noiseVol','noiseVol'],['natureVol','natureVol'],['amDepth','amDepth'],['fx','amDepth'],['amRate','amRate']].forEach(([id, key]) =>
   $('#' + id).addEventListener('input', e => { S[key] = +e.target.value; syncSliders(); applyParams(); if (key === 'volume') save(); }));
 $('#noiseType').addEventListener('change', e => { S.noise = e.target.value; if (S.noise !== 'none' && S.noiseVol < .05){ S.noiseVol = .15; syncSliders(); } applyParams(); });
 $('#spatial').addEventListener('change', e => { S.spatial = e.target.checked; save(); applyParams(); });
