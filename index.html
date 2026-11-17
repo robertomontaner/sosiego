@@ -9,45 +9,26 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <style>
-:root{
-  --bg:#0b1020; --bg2:#141b34; --card:rgba(255,255,255,.05); --line:rgba(255,255,255,.1);
-  --txt:#e8ecf8; --mut:#9aa6c8; --a:#7fd6c8; --b:#9b8cff; --warn:#ffcf8a;
-}
+:root{--bg:#0b1020;--bg2:#141b34;--card:rgba(255,255,255,.05);--line:rgba(255,255,255,.1);--txt:#e8ecf8;--mut:#9aa6c8;--a:#7fd6c8;--b:#9b8cff;--warn:#ffcf8a}
 *{box-sizing:border-box}
 html,body{margin:0}
-body{
-  min-height:100vh; color:var(--txt);
-  font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
-  background:radial-gradient(1200px 700px at 50% -10%,#1d2750 0%,var(--bg2) 40%,var(--bg) 100%) fixed;
-}
+body{min-height:100vh;color:var(--txt);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:radial-gradient(1200px 700px at 50% -10%,#1d2750 0%,var(--bg2) 40%,var(--bg) 100%) fixed}
 main{max-width:620px;margin:0 auto;padding:28px 18px 60px}
 h1{margin:0;font-size:28px;letter-spacing:.5px;font-weight:650}
 .sub{margin:4px 0 0;color:var(--mut);font-size:14.5px}
-.stage{display:flex;justify-content:center;margin:30px 0 14px}
+.stage{display:flex;justify-content:center;margin:26px 0 8px}
 .orb-wrap{position:relative;width:250px;height:250px;display:grid;place-items:center}
-.orb{
-  position:absolute;inset:14px;border-radius:50%;
-  background:radial-gradient(circle at 35% 30%,#bff5ea 0%,var(--a) 28%,var(--b) 75%,#4a3fb5 100%);
-  box-shadow:0 0 60px rgba(127,214,200,.35),0 0 140px rgba(155,140,255,.25);
-  transform:scale(.9);will-change:transform;opacity:.92
-}
-.orb-text{position:relative;text-align:center;color:#0b1020;pointer-events:none}
+.orb{position:absolute;inset:14px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#bff5ea 0%,var(--a) 28%,var(--b) 75%,#4a3fb5 100%);box-shadow:0 0 60px rgba(127,214,200,.35),0 0 140px rgba(155,140,255,.25);transform:scale(.9);will-change:transform;opacity:.92;transition:filter 2s}
+.orb-text{position:relative;text-align:center;color:#0b1020;pointer-events:none;max-width:170px}
 #orbMain{font-size:22px;font-weight:650}
 #orbSub{font-size:12.5px;opacity:.75;margin-top:2px}
-.modes{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.modes button{
-  background:var(--card);border:1px solid var(--line);color:var(--txt);border-radius:14px;
-  padding:12px 6px;font-size:15px;cursor:pointer;transition:.2s
-}
-.modes button .em{display:block;font-size:20px;margin-bottom:2px}
-.modes button[aria-pressed=true]{background:linear-gradient(135deg,rgba(127,214,200,.22),rgba(155,140,255,.22));border-color:var(--a)}
-.modes button .sug{display:block;font-size:11px;color:var(--warn);height:14px}
-.desc{color:var(--mut);font-size:14px;min-height:42px;margin:12px 2px 6px;text-align:center}
-.play{
-  display:block;width:100%;margin:6px 0 16px;padding:16px;font-size:18px;font-weight:650;color:#0b1020;
-  border:0;border-radius:16px;cursor:pointer;background:linear-gradient(135deg,var(--a),var(--b));
-}
-.play:active{transform:scale(.99)}
+.track{text-align:center;margin:0 0 4px;font-size:18px;font-weight:600;min-height:27px}
+.meta{text-align:center;color:var(--mut);font-size:13.5px;min-height:20px;margin:0 0 14px}
+.play{display:block;width:100%;margin:6px 0 10px;padding:16px;font-size:18px;font-weight:650;color:#0b1020;border:0;border-radius:16px;cursor:pointer;background:linear-gradient(135deg,var(--a),var(--b))}
+.row{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:0 0 16px}
+.btn{background:rgba(127,214,200,.12);border:1px solid var(--line);color:var(--txt);border-radius:12px;padding:9px 14px;cursor:pointer;font-size:14.5px}
+.btn:hover{border-color:var(--a)}
+.btn.on{border-color:var(--a);background:rgba(127,214,200,.25)}
 .chips{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 18px}
 .chips span.l{color:var(--mut);font-size:14px;margin-right:4px}
 .chips button{background:var(--card);border:1px solid var(--line);color:var(--txt);border-radius:999px;padding:6px 14px;cursor:pointer}
@@ -59,23 +40,34 @@ details.card summary::-webkit-details-marker{display:none}
 details.card summary::after{content:"＋";float:right;color:var(--mut)}
 details.card[open] summary::after{content:"－"}
 .card .body{padding:0 0 14px;color:#cfd6ee;font-size:14.5px}
-.field{display:grid;grid-template-columns:150px 1fr 74px;gap:10px;align-items:center;margin:10px 0}
+.field{display:grid;grid-template-columns:150px 1fr 84px;gap:10px;align-items:center;margin:10px 0}
 .field label{color:var(--mut);font-size:14px}
 .field output{font-size:13px;color:var(--mut);text-align:right;font-variant-numeric:tabular-nums}
 input[type=range]{width:100%;accent-color:var(--a)}
 select,input[type=number]{background:#0f1630;color:var(--txt);border:1px solid var(--line);border-radius:10px;padding:8px}
 .check{display:flex;gap:10px;align-items:flex-start;margin:12px 0;font-size:14.5px}
 .check input{margin-top:4px;accent-color:var(--a)}
-.btn{background:rgba(127,214,200,.14);border:1px solid var(--a);color:var(--txt);border-radius:12px;padding:9px 14px;cursor:pointer;font-size:14.5px}
 .btns{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0}
 .note{font-size:13px;color:var(--mut)}
 .tag{display:inline-block;font-size:11.5px;padding:1px 8px;border-radius:99px;border:1px solid var(--line);color:var(--mut);margin-left:6px}
 .warn{color:var(--warn)}
-ul{padding-left:20px;margin:8px 0}
-li{margin:6px 0}
+ul{padding-left:20px;margin:8px 0} li{margin:6px 0}
 footer{margin-top:26px;color:var(--mut);font-size:13px;text-align:center}
 a{color:var(--a)}
-@media (max-width:520px){.field{grid-template-columns:1fr 70px}.field label{grid-column:1/-1}.field input[type=range]{grid-column:1}}
+/* preguntas */
+.modal{position:fixed;inset:0;background:rgba(6,9,20,.82);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;padding:18px;z-index:10}
+.modal.open{display:flex}
+.sheet{width:100%;max-width:480px;background:#121a36;border:1px solid var(--line);border-radius:20px;padding:22px}
+.sheet h2{margin:0 0 4px;font-size:21px}
+.sheet .step{color:var(--mut);font-size:13px;margin-bottom:14px}
+.opts{display:grid;gap:8px}
+.opts button{text-align:left;background:var(--card);border:1px solid var(--line);color:var(--txt);border-radius:14px;padding:13px 14px;font-size:15.5px;cursor:pointer}
+.opts button:hover,.opts button:focus-visible{border-color:var(--a);outline:none}
+.opts button small{display:block;color:var(--warn);font-size:12px}
+.sheet .foot{display:flex;justify-content:space-between;margin-top:14px}
+.link{background:none;border:0;color:var(--mut);cursor:pointer;font-size:14px;padding:4px}
+.repeat{width:100%;margin-bottom:14px;text-align:left}
+@media (max-width:520px){.field{grid-template-columns:1fr 80px}.field label{grid-column:1/-1}}
 @media (prefers-reduced-motion:reduce){.orb{transition:none}}
 </style>
 </head>
@@ -89,21 +81,24 @@ a{color:var(--a)}
   <section class="stage" aria-live="polite">
     <div class="orb-wrap">
       <div class="orb" id="orb"></div>
-      <div class="orb-text"><div id="orbMain">Elige un modo</div><div id="orbSub"></div></div>
+      <div class="orb-text"><div id="orbMain">Sosiego</div><div id="orbSub">toca Empezar</div></div>
     </div>
   </section>
-
-  <div class="modes" id="modes" role="group" aria-label="Modo">
-    <button data-mode="focus" aria-pressed="false"><span class="em">◎</span>Enfoque<span class="sug"></span></button>
-    <button data-mode="calm" aria-pressed="false"><span class="em">≈</span>Calma<span class="sug"></span></button>
-    <button data-mode="sleep" aria-pressed="false"><span class="em">☾</span>Dormir<span class="sug"></span></button>
-  </div>
-  <p class="desc" id="modeDesc"></p>
+  <p class="track" id="trackName"></p>
+  <p class="meta" id="trackMeta"></p>
 
   <button class="play" id="play">▶ Empezar</button>
+  <div class="row">
+    <button class="btn" id="next" title="Genera una pista nueva con tus mismas respuestas">⟳ Otra pista</button>
+    <button class="btn" id="ask">Cambiar respuestas</button>
+    <button class="btn" id="like" title="Sosiego te pondrá más sonidos de este tipo">👍 Me ayuda</button>
+    <button class="btn" id="dislike" title="Pasa a otra pista y te pondrá menos de este tipo">👎 No me va</button>
+  </div>
 
+  <input type="text" id="taskIn" maxlength="80" placeholder="¿En qué te vas a centrar? (opcional)" style="width:100%;margin:0 0 12px;background:#0f1630;color:var(--txt);border:1px solid var(--line);border-radius:12px;padding:11px 13px;font-size:15px">
   <div class="chips" id="dur">
     <span class="l">Sesión</span>
+    <button data-min="-1" aria-pressed="false" title="25 min de enfoque y 5 de descanso, en bucle">Pomodoro 25/5</button>
     <button data-min="25" aria-pressed="false">25 min</button>
     <button data-min="45" aria-pressed="false">45 min</button>
     <button data-min="60" aria-pressed="false">1 h</button>
@@ -112,53 +107,54 @@ a{color:var(--a)}
     <span id="remain"></span>
   </div>
 
-  <details class="card" open>
-    <summary>Tu ritmo <span class="tag">adaptación</span></summary>
-    <div class="body">
-      <p style="margin-top:0">Sosiego ajusta el <b>pulso de las campanas</b> y la <b>guía de respiración</b> a tu propio ritmo. En Calma y Dormir, el pulso baja poco a poco por debajo del tuyo (hasta ~20 lpm) para invitar a tu cuerpo a seguirlo.</p>
-      <div class="btns">
-        <label for="hrIn" class="note">Mis latidos por minuto</label>
-        <input type="number" id="hrIn" min="40" max="180" placeholder="p. ej. 78" style="width:92px">
-        <button class="btn" id="tap">Marcar mi pulso (toca al ritmo)</button>
-      </div>
-      <p class="note" style="margin:4px 0">Tómate el pulso en la muñeca y ve tocando el botón al ritmo (4 toques o más), o escribe el número que te marca tu reloj o pulsera.</p>
-      <div class="btns" id="btRow" hidden>
-        <button class="btn" id="btHr">Conectar pulsómetro Bluetooth</button>
-        <span class="note" id="btState"></span>
-      </div>
-      <p class="note" id="btNote" hidden>Funciona con bandas de pecho (Polar, Wahoo, etc.) y relojes que emitan pulso por Bluetooth estándar, con Chrome o Edge en Android u ordenador.</p>
-      <label class="check"><input type="checkbox" id="timeAdapt"><span>Adaptar el brillo del sonido a la hora del día (más claro por la mañana, más oscuro por la noche).</span></label>
-      <p class="note" id="rhythmInfo" style="margin:0"></p>
-    </div>
-  </details>
-
   <details class="card">
     <summary>Ajustes del sonido</summary>
     <div class="body">
       <div class="field"><label for="vol">Volumen</label><input type="range" id="vol" min="0" max="1" step=".01"><output id="volO"></output></div>
       <div class="field"><label for="music">Música</label><input type="range" id="music" min="0" max="1" step=".01"><output id="musicO"></output></div>
+      <div class="field"><label for="natureVol">Naturaleza</label><input type="range" id="natureVol" min="0" max="1" step=".01"><output id="natureVolO"></output></div>
       <div class="field"><label for="noiseVol">Ruido de fondo</label><input type="range" id="noiseVol" min="0" max=".6" step=".01"><output id="noiseVolO"></output></div>
       <div class="field"><label for="noiseType">Tipo de ruido</label>
         <select id="noiseType"><option value="none">Ninguno</option><option value="brown">Marrón (grave)</option><option value="pink">Rosa</option><option value="white">Blanco</option></select><span></span></div>
-      <div class="field"><label for="amDepth">Modulación: intensidad</label><input type="range" id="amDepth" min="0" max=".8" step=".01"><output id="amDepthO"></output></div>
+      <div class="field"><label for="amDepth">Modulación: intensidad</label><input type="range" id="amDepth" min="0" max=".85" step=".01"><output id="amDepthO"></output></div>
       <div class="field"><label for="amRate">Modulación: velocidad</label><input type="range" id="amRate" min="4" max="24" step="1"><output id="amRateO"></output></div>
+      <label class="check"><input type="checkbox" id="spatial"><span>Movimiento espacial: el sonido gira despacio a tu alrededor <span class="note">(mejor con auriculares)</span></span></label>
       <label class="check"><input type="checkbox" id="binaural"><span>Añadir tono binaural <span class="note">(solo con auriculares; la evidencia es mixta)</span></span></label>
-      <p class="note" style="margin-bottom:0">Si la modulación te molesta o te cansa, bájala o ponla a 0: no funciona igual para todo el mundo.</p>
+      <p class="note" style="margin-bottom:0">Cada pista nueva vuelve a poner los valores que encajan con tus respuestas. La modulación empieza suave y sube en los primeros minutos. Si te cansa, bájala: no funciona igual para todo el mundo.</p>
     </div>
   </details>
+
 
   <details class="card">
     <summary>Qué dice la ciencia (y qué no) <span class="tag">honestidad</span></summary>
     <div class="body">
       <p class="warn" style="margin-top:0"><b>Sosiego no es un tratamiento médico.</b> No cura el TDAH ni la ansiedad. Es una herramienta de apoyo; si tu malestar es importante, consulta con un profesional.</p>
       <ul>
-        <li><b>Música con modulación de amplitud (Enfoque).</b> Un estudio de 2024 en <i>Communications Biology</i> (Woods et al.) halló que la música con modulaciones rápidas apoyaba la atención sostenida y activaba redes atencionales, con diferencias según el nivel de dificultad atencional de cada persona. El estudio se hizo en colaboración con Brain.fm, y el efecto no fue igual en todas las condiciones. Es prometedor, no es una garantía.</li>
-        <li><b>Ruido blanco/rosa suave.</b> Un metaanálisis de 2024 (Nigg et al., <i>JAACAP</i>) encontró un beneficio pequeño pero significativo en jóvenes con TDAH, y un ligero empeoramiento en quienes no lo tienen. Mejor a volumen bajo. El <b>ruido marrón</b> es muy popular, pero casi todo lo que hay son testimonios, no estudios sólidos.</li>
-        <li><b>Binaurales.</b> Las revisiones muestran resultados contradictorios. Por eso están desactivados por defecto.</li>
-        <li><b>Respiración lenta (Calma).</b> Inhalar ~4 s y exhalar ~6 s (unas 6 respiraciones por minuto) es una técnica habitual para la relajación, con respaldo moderado.</li>
-        <li><b>Adaptación.</b> Las apps comerciales usan algoritmos propietarios y sensores. Aquí la adaptación es más sencilla y transparente: tu pulso, la hora y tus ajustes.</li>
+        <li><b>Música con modulación de amplitud (Enfoque).</b> Un estudio de 2024 en <i>Communications Biology</i> (Woods et al.) halló que la música con modulaciones rápidas apoyaba la atención sostenida y activaba redes atencionales, con diferencias según el nivel de dificultad atencional. Se hizo en colaboración con Brain.fm y el efecto no fue igual en todas las condiciones.</li>
+        <li><b>Ruido blanco/rosa suave.</b> Un metaanálisis de 2024 (Nigg et al., <i>JAACAP</i>) encontró un beneficio pequeño en jóvenes con TDAH y un ligero empeoramiento en quienes no lo tienen. El ruido marrón es popular pero la evidencia es sobre todo anecdótica.</li>
+        <li><b>Binaurales.</b> Resultados contradictorios; desactivados por defecto.</li>
+        <li><b>Respiración lenta (Calma).</b> Inhalar ~4 s y exhalar ~6 s es una técnica habitual de relajación.</li>
+        <li><b>Variedad.</b> Cada pista se genera al momento (tonalidad, acordes, instrumentos, ritmo) y va cambiando por secciones, para que no canse. Tus 👍/👎 se guardan solo en tu dispositivo.</li>
       </ul>
-      <p class="note" style="margin-bottom:0">Lo mejor es probarlo tú mismo: si tras unos días notas que te ayuda, genial; si no, no pasa nada.</p>
+    </div>
+  </details>
+
+  <details class="card">
+    <summary>Pulso cardiaco <span class="tag">opcional</span></summary>
+    <div class="body">
+      <p style="margin-top:0">Solo si tienes forma de medirlo. En Calma y Dormir, el pulso del sonido sigue tu ritmo cardiaco y lo va bajando poco a poco (hasta ~20 lpm por debajo) para invitar a tu cuerpo a seguirlo. En Enfoque, el tempo lo eligen tus respuestas.</p>
+      <div class="btns">
+        <label for="hrIn" class="note">Mis latidos por minuto</label>
+        <input type="number" id="hrIn" min="40" max="180" placeholder="p. ej. 78" style="width:92px">
+        <button class="btn" id="tap">Marcar mi pulso (toca al ritmo)</button>
+      </div>
+      <p class="note" style="margin:4px 0">Tómate el pulso en la muñeca y toca el botón al ritmo (4 toques o más), o escribe lo que marca tu reloj.</p>
+      <div class="btns" id="btRow" hidden>
+        <button class="btn" id="btHr">Conectar pulsómetro Bluetooth</button>
+        <span class="note" id="btState"></span>
+      </div>
+      <label class="check"><input type="checkbox" id="timeAdapt"><span>Adaptar el brillo del sonido a la hora del día.</span></label>
+      <p class="note" id="rhythmInfo" style="margin:0"></p>
     </div>
   </details>
 
@@ -167,45 +163,100 @@ a{color:var(--a)}
     No está afiliado a Brain.fm ni a Endel.
   </footer>
 </main>
+
+<div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="qTitle">
+  <div class="sheet">
+    <button class="btn repeat" id="repeat" hidden></button>
+    <h2 id="qTitle"></h2>
+    <div class="step" id="qStep"></div>
+    <div class="opts" id="qOpts"></div>
+    <div class="foot"><button class="link" id="qBack">← Atrás</button><button class="link" id="qClose">Cerrar</button></div>
+  </div>
+</div>
 <audio id="keep" playsinline hidden></audio>
 
 <script>
 (() => {
 'use strict';
-const $ = s => document.querySelector(s);
+const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
 const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
+const midi = m => 440 * Math.pow(2, (m - 69) / 12);
+const rnd = (a, b) => a + Math.random() * (b - a);
+const choose = (arr, r = Math.random) => arr[Math.floor(r() * arr.length)];
+function rngFrom(seed){ let a = seed >>> 0; return () => { a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 
-/* ---------- Modos ---------- */
-const MODES = {
-  focus: { label:'Enfoque', desc:'Música suave con modulación rápida (16 Hz) y ruido marrón de fondo. Para tareas largas sin distraerte. El pulso guía casi no se oye aquí, a propósito.',
-           amRate:16, amDepth:.5, noise:'brown', noiseVol:.25, music:.8, cutoff:1600, chord:36, bells:0,   breath:false, bin:14,  bpm:70 },
-  calm:  { label:'Calma', desc:'Acordes lentos, campanitas suaves y una guía de respiración (inhala 4 s, exhala 6 s). Para bajar la ansiedad.',
-           amRate:10, amDepth:0,  noise:'pink',  noiseVol:.12, music:.85, cutoff:1200, chord:22, bells:1,   breath:true,  bin:10,  bpm:60 },
-  sleep: { label:'Dormir', desc:'Sonido muy grave y casi inmóvil, con ruido marrón envolvente. Se apaga solo con un fundido largo.',
-           amRate:6,  amDepth:0,  noise:'brown', noiseVol:.30, music:.45, cutoff:520,  chord:48, bells:.25, breath:false, bin:2.5, bpm:52 }
-};
-const CHORDS = [ // MIDI. Familia de La menor / Do mayor, siempre consonante
-  [45,52,57,60,64,71], // Am9
-  [41,53,57,60,64,67], // Fmaj9
-  [48,55,59,62,64,67], // Cmaj9
-  [43,50,55,59,62,69], // Gadd9
-  [40,47,52,55,59,62]  // Em7
+/* ---------- Preguntas ---------- */
+const QUESTIONS = [
+  { id:'activity', t:'¿Qué vas a hacer ahora?', o:[['trabajar','Trabajar o estudiar'],['crear','Crear o escribir'],['leer','Leer'],['relajar','Relajarme'],['meditar','Meditar o respirar'],['dormir','Dormir']] },
+  { id:'feeling',  t:'¿Cómo te sientes?', o:[['disperso','Disperso, con la mente en caos'],['ansioso','Ansioso o acelerado'],['cansado','Cansado, sin energía'],['bien','Bien, tranquilo']] },
+  { id:'palette',  t:'¿Qué sonido te apetece?', o:[['calido','Cálido · piano y pads'],['cristal','Cristal · campanas y marimba'],['naturaleza','Naturaleza · lluvia, mar o viento'],['electronico','Electrónico · pulso suave'],['sorpresa','Sorpréndeme']] },
+  { id:'intensity',t:'¿Cuánta intensidad?', when:p => isFocus(p.activity), o:[['suave','Suave'],['media','Media'],['alta','Alta']],
+    rec:p => p.feeling === 'disperso' ? 'alta' : p.feeling === 'ansioso' ? 'suave' : 'media' }
 ];
-const BELL_SCALE = [69,72,74,76,79,81,84]; // pentatónica menor de La
-const PERSIST = ['volume','minutes','binaural','timeAdapt','hrManual','mode'];
-const BIN_CARRIER = 170;
+const LABEL = {}; QUESTIONS.forEach(q => q.o.forEach(([k, l]) => LABEL[k] = l.split(/[ ,·]/)[0]));
+const isFocus = a => ['trabajar','crear','leer'].includes(a);
+const modeOf = a => isFocus(a) ? 'focus' : a === 'dormir' ? 'sleep' : 'calm';
+const MODE_LABEL = { focus:'Enfoque', calm:'Calma', sleep:'Dormir' };
+const PALETTES = ['calido','cristal','naturaleza','electronico'];
 
-const S = { mode:'focus', volume:.7, minutes:45, binaural:false, timeAdapt:true, hrManual:null, hrLive:null,
-            amRate:16, amDepth:.5, noise:'brown', noiseVol:.25, music:.8, cutoff:1600, chord:36, bells:0, breath:false };
-try { const sv = JSON.parse(localStorage.getItem('sosiego') || '{}'); PERSIST.forEach(k => { if (k in sv) S[k] = sv[k]; }); } catch(e){}
-const save = () => { try { localStorage.setItem('sosiego', JSON.stringify(Object.fromEntries(PERSIST.map(k => [k, S[k]])))); } catch(e){} };
+/* ---------- Estado ---------- */
+const PERSIST = ['volume','minutes','binaural','timeAdapt','hrManual','profile','likes','spatial','task'];
+const S = { spatial:true, task:'', volume:.7, minutes:45, binaural:false, timeAdapt:true, hrManual:null, hrLive:null, profile:null,
+            likes:{ calido:0, cristal:0, naturaleza:0, electronico:0 },
+            amRate:16, amDepth:.5, noise:'brown', noiseVol:.2, music:.85, natureVol:.8, cutoff:1800 };
+try { const sv = JSON.parse(localStorage.getItem('sosiego2') || '{}'); PERSIST.forEach(k => { if (k in sv) S[k] = sv[k]; }); } catch(e){}
+const save = () => { try { localStorage.setItem('sosiego2', JSON.stringify(Object.fromEntries(PERSIST.map(k => [k, S[k]])))); } catch(e){} };
+
+/* ---------- Generador de pistas ---------- */
+const SCALES = { dorian:[0,2,3,5,7,9,10], lydian:[0,2,4,6,7,9,11], ionian:[0,2,4,5,7,9,11], mixo:[0,2,4,5,7,9,10], aeolian:[0,2,3,5,7,8,10] };
+const PROGS = [[0,5,3,4],[0,3,5,4],[0,4,5,3],[5,3,0,4],[0,2,5,3],[0,3,0,4],[3,4,0,0],[0,5,1,4],[0,1,3,0],[3,0,4,5],[0,6,5,3],[5,4,3,4]];
+const N1 = ['Bruma','Faro','Marea','Jardín','Órbita','Bosque','Cristal','Río','Nube','Puerto','Valle','Brújula','Lámpara','Arena','Ola','Cometa','Sendero','Isla','Hoguera','Glaciar'];
+const N2 = ['cobre','niebla','marzo','sal','ámbar','cedro','luna','seda','pizarra','miel','musgo','plata','lino','vidrio','otoño','azafrán','granito','lavanda','eucalipto','índigo'];
+
+function weightedPalette(r){
+  const w = PALETTES.map(p => Math.exp(clamp(S.likes[p] || 0, -4, 6) * .45)), tot = w.reduce((a, b) => a + b, 0);
+  let x = r() * tot; for (let i = 0; i < w.length; i++){ x -= w[i]; if (x <= 0) return PALETTES[i]; } return PALETTES[0];
+}
+function makeTrack(p, seed){
+  const r = rngFrom(seed), pick = a => choose(a, r), mode = modeOf(p.activity);
+  const pal = p.palette === 'sorpresa' ? weightedPalette(r) : p.palette;
+  const T = { seed, mode, pal, name: pick(N1) + ' de ' + pick(N2) };
+  T.root = 48 + Math.floor(r() * 8);
+  T.scale = SCALES[pick(mode === 'sleep' ? ['aeolian','dorian','lydian'] : mode === 'calm' ? ['ionian','lydian','dorian','mixo'] : ['dorian','lydian','ionian','mixo','aeolian'])];
+  T.prog = pick(PROGS);
+  if (mode === 'focus') T.tempo = 100 + r()*18 + (p.feeling === 'cansado' ? 8 : 0) - (p.feeling === 'ansioso' ? 12 : 0) - (p.activity === 'leer' ? 10 : 0);
+  else T.tempo = mode === 'calm' ? 56 + r()*8 : 48 + r()*6;
+  const h = new Date().getHours(), lowPhase = (h >= 14 && h < 16) || h >= 21 || h < 7;   // bajones del ritmo circadiano
+  if (mode === 'focus' && lowPhase) T.tempo -= 4;
+  T.tempo = Math.round(T.tempo);
+  T.chordBeats = mode === 'focus' ? pick([8,16,16]) : mode === 'calm' ? 16 : 24;
+  T.amDepth = mode === 'focus' ? ({ suave:.3, media:.5, alta:.72 })[p.intensity || 'media'] : 0;
+  if (mode === 'focus' && lowPhase) T.amDepth *= .85;
+  T.amRate = 16;
+  T.cutoff = mode === 'focus' ? (p.feeling === 'cansado' ? 2600 : p.feeling === 'ansioso' ? 1500 : 2000) : mode === 'calm' ? 1300 : 650;
+  T.padTimbre = pal === 'cristal' ? 'glass' : (pal === 'calido' || pal === 'electronico') ? pick(['warm','soft']) : 'soft';
+  T.arp = mode === 'focus' && pal !== 'naturaleza' ? (pal === 'electronico' ? pick([1,2]) : 2) : 0;   // pasos entre notas (1 = semicorcheas)
+  if (p.activity === 'leer' && T.arp) T.arp = 4;
+  T.arpVoice = pal === 'cristal' ? 'marimba' : pal === 'calido' ? 'keys' : 'pluck';
+  T.arpPat = pick(['up','updown','rand','alberti']);
+  T.bass = mode === 'focus' ? pick([4,8]) : 0;
+  T.thump = mode === 'focus' && p.activity !== 'leer' && (pal === 'electronico' || (pal === 'naturaleza' && r() < .5));
+  T.melVoice = pal === 'cristal' ? pick(['bell','marimba']) : pal === 'calido' ? 'keys' : pal === 'electronico' ? 'pluck' : 'bell';
+  T.melProb = mode === 'sleep' ? .05 : mode === 'calm' ? .2 : p.activity === 'crear' ? .35 : p.activity === 'leer' ? 0 : .12;
+  T.nature = pal === 'naturaleza' ? pick(['lluvia','mar','viento']) : (mode === 'sleep' && r() < .35 ? pick(['lluvia','mar']) : null);
+  T.noise = T.nature ? 'none' : mode === 'calm' ? 'pink' : 'brown';
+  T.noiseVol = T.nature ? 0 : mode === 'focus' ? .2 : mode === 'calm' ? .1 : .28;
+  T.music = mode === 'sleep' ? .5 : .85;
+  T.breath = mode === 'calm' ? (p.activity === 'meditar' ? 'box' : '46') : null;
+  return T;
+}
 
 /* ---------- Motor de audio ---------- */
-let ctx = null, running = false, tickTimer = null, uiTimer = null;
-let master, fade, comp, analyser, padBus, filter, amGain, lfo, lfoDepth, breathGain, musicOut, bellBus, revSend, reverb;
-let noises = {}, bin = null;
-let nextChord = 0, nextBeat = 0, nextBreath = 0, breathT0 = 0, lastChordIdx = -1, lastBell = 0;
-let bpm = 60, startedAt = 0, endAt = 0, wakeLock = null, lastLive = 0;
+let ctx = null, running = false, tickTimer = null, uiTimer = null, wakeLock = null;
+let spatialPan, panDepth, master, fade, comp, analyser, musicIn, filter, revSend, reverb, amGain, lfo, lfoDepth, breathGain, musicOut, natureOut, NB = null;
+let noises = {}, bin = null, cur = null, T = null, sec = null;
+let clock = {};
+let pomo = null, trackStart = 0, lastArc = 0, bpm = 60, startedAt = 0, endAt = 0, lastLive = 0, breathT0 = 0;
 const IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
 function makeIR(c, sec, decay){
@@ -220,285 +271,409 @@ function makeNoise(c, type){
     for (let i = 0; i < n; i++){
       const w = Math.random()*2-1;
       if (type === 'brown'){ last = (last + 0.02*w)/1.02; d[i] = last*3.5; }
-      else if (type === 'pink'){
-        b0=.99886*b0+w*.0555179; b1=.99332*b1+w*.0750759; b2=.969*b2+w*.153852; b3=.8665*b3+w*.3104856; b4=.55*b4+w*.5329522; b5=-.7616*b5-w*.016898;
-        d[i] = (b0+b1+b2+b3+b4+b5+b6+w*.5362)*.11; b6 = w*.115926;
-      } else d[i] = w*.35;
+      else if (type === 'pink'){ b0=.99886*b0+w*.0555179; b1=.99332*b1+w*.0750759; b2=.969*b2+w*.153852; b3=.8665*b3+w*.3104856; b4=.55*b4+w*.5329522; b5=-.7616*b5-w*.016898; d[i]=(b0+b1+b2+b3+b4+b5+b6+w*.5362)*.11; b6=w*.115926; }
+      else d[i] = w*.35;
     }
-    const N = 4096; // empalme del bucle sin clic
-    for (let i = 0; i < N; i++){ const a = i/N; d[n-N+i] = d[n-N+i]*(1-a) + d[i]*a; }
+    const N = 4096; for (let i = 0; i < N; i++){ const a = i/N; d[n-N+i] = d[n-N+i]*(1-a) + d[i]*a; }
   }
   return b;
 }
-const bright = () => { if (!S.timeAdapt) return 1; const h = new Date().getHours();
-  return h>=6&&h<11 ? 1.15 : h>=11&&h<17 ? 1 : h>=17&&h<21 ? .85 : .68; };
-const midi = m => 440*Math.pow(2,(m-69)/12);
+const bright = () => { if (!S.timeAdapt) return 1; const h = new Date().getHours(); return h>=6&&h<11 ? 1.15 : h>=11&&h<17 ? 1 : h>=17&&h<21 ? .85 : .68; };
 
-async function start(){
+async function initAudio(){
   const AC = window.AudioContext || window.webkitAudioContext;
   ctx = new AC({ latencyHint:'playback' });
-  master = ctx.createGain(); fade = ctx.createGain(); comp = ctx.createDynamicsCompressor();
-  analyser = ctx.createAnalyser(); analyser.fftSize = 512;
+  master = ctx.createGain(); fade = ctx.createGain(); comp = ctx.createDynamicsCompressor(); analyser = ctx.createAnalyser(); analyser.fftSize = 512;
   master.connect(fade); fade.connect(comp); comp.connect(analyser);
   let out = ctx.destination;
-  if (IOS){ // mantiene el audio con la pantalla bloqueada (experimental)
-    try { const d = ctx.createMediaStreamDestination(), el = $('#keep'); el.srcObject = d.stream; await el.play(); out = d; } catch(e){ out = ctx.destination; }
-  }
+  if (IOS){ try { const d = ctx.createMediaStreamDestination(), el = $('#keep'); el.srcObject = d.stream; await el.play(); out = d; } catch(e){ out = ctx.destination; } }
   comp.connect(out);
-
-  reverb = ctx.createConvolver(); reverb.buffer = makeIR(ctx, 5, 2.4);
-  revSend = ctx.createGain(); revSend.gain.value = .55; revSend.connect(reverb); reverb.connect(master);
-
-  padBus = ctx.createGain(); filter = ctx.createBiquadFilter(); filter.type = 'lowpass'; filter.Q.value = .4;
-  amGain = ctx.createGain(); breathGain = ctx.createGain(); musicOut = ctx.createGain(); bellBus = ctx.createGain();
-  lfo = ctx.createOscillator(); lfo.type = 'sine'; lfoDepth = ctx.createGain();
-  lfo.connect(lfoDepth); lfoDepth.connect(amGain.gain); lfo.start();
-  padBus.connect(filter); filter.connect(amGain); amGain.connect(breathGain); breathGain.connect(musicOut);
-  bellBus.connect(musicOut);
-  musicOut.connect(master); musicOut.connect(revSend);
-
+  NB = { brown:makeNoise(ctx,'brown'), pink:makeNoise(ctx,'pink'), white:makeNoise(ctx,'white') };
+  // música: entrada -> filtro -> (seco + reverb) -> modulación -> respiración -> salida
+  musicIn = ctx.createGain(); filter = ctx.createBiquadFilter(); filter.type = 'lowpass'; filter.Q.value = .5;
+  reverb = ctx.createConvolver(); reverb.buffer = makeIR(ctx, 5, 2.4); revSend = ctx.createGain(); revSend.gain.value = .5;
+  amGain = ctx.createGain(); breathGain = ctx.createGain(); musicOut = ctx.createGain(); natureOut = ctx.createGain();
+  lfo = ctx.createOscillator(); lfo.type = 'sine'; lfoDepth = ctx.createGain(); lfo.connect(lfoDepth); lfoDepth.connect(amGain.gain); lfo.start();
+  musicIn.connect(filter); filter.connect(amGain); filter.connect(revSend); revSend.connect(reverb); reverb.connect(amGain);
+  amGain.connect(breathGain);
+  spatialPan = ctx.createStereoPanner(); const panLfo = ctx.createOscillator(); panLfo.frequency.value = .045; panDepth = ctx.createGain(); panDepth.gain.value = 0;
+  panLfo.connect(panDepth); panDepth.connect(spatialPan.pan); panLfo.start(); breathGain.connect(spatialPan); spatialPan.connect(musicOut); musicOut.connect(master); natureOut.connect(master);
   noises = {};
   ['brown','pink','white'].forEach(t => {
-    const src = ctx.createBufferSource(); src.buffer = makeNoise(ctx, t); src.loop = true;
+    const src = ctx.createBufferSource(); src.buffer = NB[t]; src.loop = true;
     const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = t==='white' ? 7000 : t==='pink' ? 9000 : 4000;
-    const g = ctx.createGain(); g.gain.value = 0;
-    src.connect(lp); lp.connect(g); g.connect(master); src.start(); noises[t] = { g };
+    const g = ctx.createGain(); g.gain.value = 0; src.connect(lp); lp.connect(g); g.connect(master); src.start(); noises[t] = { g };
   });
-
-  const t = ctx.currentTime;
-  fade.gain.setValueAtTime(0, t); fade.gain.linearRampToValueAtTime(1, t + 5);
-  applyParams(true);
-  setBinaural(S.binaural);
-
-  startedAt = Date.now(); bpm = targetBpm();
-  nextChord = t + .1; nextBeat = t + 2; lastBell = 0; lastChordIdx = -1;
-  if (S.breath){ breathT0 = nextBreath = t + .3; } else nextBreath = Infinity;
-  running = true;
-  endAt = S.minutes ? startedAt + S.minutes*60000 : 0;
-  tickTimer = setInterval(tick, 150); tick();
-  uiTimer = setInterval(updateRemain, 500);
-  try { navigator.wakeLock && (wakeLock = await navigator.wakeLock.request('screen')); } catch(e){}
-  try { if ('mediaSession' in navigator){
-    navigator.mediaSession.metadata = new MediaMetadata({ title:'Sosiego · ' + MODES[S.mode].label, artist:'Sonido adaptativo' });
-    navigator.mediaSession.setActionHandler('pause', () => stop()); navigator.mediaSession.setActionHandler('play', () => toggle());
-  } } catch(e){}
-  await ctx.resume();
-  setPlayUI();
 }
 
-function stop(sec = 2.5){
-  if (!ctx) return;
-  const c = ctx, f = fade, t = c.currentTime;
-  clearInterval(tickTimer); clearInterval(uiTimer);
-  f.gain.cancelScheduledValues(t); f.gain.setValueAtTime(f.gain.value, t); f.gain.linearRampToValueAtTime(0, t + sec);
-  setTimeout(() => { try { c.close(); } catch(e){} }, sec*1000 + 300);
-  ctx = null; running = false; bin = null;
-  try { wakeLock && wakeLock.release(); } catch(e){} wakeLock = null;
-  try { $('#keep').pause(); } catch(e){}
-  setPlayUI(); $('#remain').textContent = '';
+// arco de la sesión: empieza suave, sube en ~2,5 min y baja al final (como las fases de inicio, medio y fin)
+function arc(){
+  if (!running) return 1;
+  const el = (Date.now() - trackStart) / 1000; let a = Math.min(1, .35 + .65 * el / 150);
+  const end = pomo ? pomo.until : endAt; if (end){ const left = (end - Date.now()) / 1000; if (left < 120) a *= Math.max(.25, left / 120); }
+  return a;
 }
-
 function applyParams(instant){
   if (!ctx) return;
   const t = ctx.currentTime, k = instant ? .01 : .15;
   master.gain.setTargetAtTime(S.volume*.9, t, .1);
   lfo.frequency.setTargetAtTime(S.amRate, t, k);
-  lfoDepth.gain.setTargetAtTime(S.amDepth/2, t, k);
-  amGain.gain.setTargetAtTime(1 - S.amDepth/2, t, k);
-  filter.frequency.setTargetAtTime(S.cutoff*bright(), t, instant ? .01 : .6);
+  const d = S.amDepth * arc();
+  lfoDepth.gain.setTargetAtTime(d/2, t, instant ? .01 : 1);
+  amGain.gain.setTargetAtTime(1 - d/2, t, instant ? .01 : 1);
+  panDepth.gain.setTargetAtTime(S.spatial ? (T && T.mode === 'focus' ? .15 : .55) : 0, t, 1);
+  filter.frequency.setTargetAtTime(S.cutoff * bright() * (sec ? sec.tone : 1), t, instant ? .01 : 1.5);
   musicOut.gain.setTargetAtTime(S.music, t, k);
-  for (const n in noises) noises[n].g.gain.setTargetAtTime(n === S.noise ? S.noiseVol : 0, t, .4);
-  if (bin) bin.oR.frequency.setTargetAtTime(BIN_CARRIER + MODES[S.mode].bin, t, .3);
+  natureOut.gain.setTargetAtTime(S.natureVol, t, k);
+  for (const n in noises) noises[n].g.gain.setTargetAtTime(n === S.noise ? S.noiseVol : 0, t, .6);
+  if (bin) bin.oR.frequency.setTargetAtTime(170 + (T && T.mode === 'focus' ? 14 : T && T.mode === 'sleep' ? 2.5 : 10), t, .3);
 }
 
 function setBinaural(on){
   if (!ctx) return;
   if (on && !bin){
-    const mk = (f, pan) => { const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.value = f;
-      const p = ctx.createStereoPanner(); p.pan.value = pan; o.connect(p); return { o, p }; };
-    const g = ctx.createGain(); g.gain.value = 0;
-    const L = mk(BIN_CARRIER, -1), R = mk(BIN_CARRIER + MODES[S.mode].bin, 1);
-    L.p.connect(g); R.p.connect(g); g.connect(master); L.o.start(); R.o.start();
-    g.gain.setTargetAtTime(.05, ctx.currentTime, .8); bin = { oL:L.o, oR:R.o, g };
+    const mk = (f, pan) => { const o = ctx.createOscillator(); o.frequency.value = f; const p = ctx.createStereoPanner(); p.pan.value = pan; o.connect(p); return { o, p }; };
+    const g = ctx.createGain(); g.gain.value = 0; const L = mk(170, -1), R = mk(180, 1);
+    L.p.connect(g); R.p.connect(g); g.connect(master); L.o.start(); R.o.start(); g.gain.setTargetAtTime(.05, ctx.currentTime, .8);
+    bin = { oL:L.o, oR:R.o, g }; applyParams();
   } else if (!on && bin){
-    const b = bin; bin = null; b.g.gain.setTargetAtTime(0, ctx.currentTime, .3);
-    const c = ctx; setTimeout(() => { try { b.oL.stop(); b.oR.stop(); } catch(e){} }, 1500);
+    const b = bin; bin = null; b.g.gain.setTargetAtTime(0, ctx.currentTime, .3); setTimeout(() => { try { b.oL.stop(); b.oR.stop(); } catch(e){} }, 1500);
   }
 }
 
-function playChord(t){
-  const L = S.chord, att = Math.min(8, L*.3), rel = 9;
-  let idx; do { idx = Math.floor(Math.random()*CHORDS.length); } while (idx === lastChordIdx);
-  lastChordIdx = idx;
-  CHORDS[idx].forEach((m, i) => {
-    [['sine', -5, .03], ['triangle', 6, .017]].forEach(([type, det, peak]) => {
-      const o = ctx.createOscillator(); o.type = type; o.frequency.value = midi(m); o.detune.value = det + (Math.random()*4 - 2);
-      const g = ctx.createGain(), a = t + att + i*.4;
-      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(peak, a);
-      g.gain.setValueAtTime(peak, t + L); g.gain.linearRampToValueAtTime(0, t + L + rel);
-      o.connect(g); g.connect(padBus); o.start(t); o.stop(t + L + rel + .2);
-    });
-  });
+/* ---------- Instrumentos ---------- */
+function panned(dest, pan){ const p = ctx.createStereoPanner(); p.pan.value = pan; p.connect(dest); return p; }
+function pad(t, notes, dur, timbre, dest){
+  const att = Math.min(6, dur*.35), rel = Math.min(10, dur*.6 + 3);
+  const layers = timbre === 'warm' ? [['sawtooth',-7,.006],['sawtooth',7,.006],['sine',0,.016]]
+               : timbre === 'glass' ? [['sine',0,.022],['sine',1200,.005]] : [['sine',-5,.02],['triangle',6,.012]];
+  notes.forEach((m, i) => layers.forEach(([type, det, pk]) => {
+    const o = ctx.createOscillator(), g = ctx.createGain(), a = t + att + i*.3;
+    o.type = type; o.frequency.value = midi(m); o.detune.value = det + rnd(-3, 3); pk *= i === 0 ? 1.2 : 1;
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(pk, a); g.gain.setValueAtTime(pk, t + dur); g.gain.linearRampToValueAtTime(0, t + dur + rel);
+    o.connect(g); g.connect(dest); o.start(t); o.stop(t + dur + rel + .2);
+  }));
 }
-
-function bell(t){
-  const f = midi(BELL_SCALE[Math.floor(Math.random()*BELL_SCALE.length)] + (Math.random() < .3 ? -12 : 0));
-  const o = ctx.createOscillator(), o2 = ctx.createOscillator(), g = ctx.createGain(), p = ctx.createStereoPanner();
-  o.type = o2.type = 'sine'; o.frequency.value = f; o2.frequency.value = f*2.001;
-  const g2 = ctx.createGain(); g2.gain.value = .22; o2.connect(g2); g2.connect(g);
-  o.connect(g); p.pan.value = Math.random()*1.2 - .6; g.connect(p); p.connect(bellBus);
-  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.05, t + .02); g.gain.setTargetAtTime(0, t + .02, 1.2);
+function keys(t, m, v, dest){ // piano eléctrico por FM
+  const f = midi(m), c = ctx.createOscillator(), mo = ctx.createOscillator(), mg = ctx.createGain(), g = ctx.createGain();
+  c.frequency.value = f; mo.frequency.value = f; mg.gain.setValueAtTime(f*2, t); mg.gain.setTargetAtTime(f*.2, t, .3);
+  mo.connect(mg); mg.connect(c.frequency); c.connect(g); g.connect(panned(dest, rnd(-.5, .5)));
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.04*v, t + .006); g.gain.setTargetAtTime(0, t + .01, .8);
+  c.start(t); mo.start(t); c.stop(t + 5); mo.stop(t + 5);
+}
+function marimba(t, m, v, dest){
+  const f = midi(m), o = ctx.createOscillator(), o2 = ctx.createOscillator(), g = ctx.createGain(), g2 = ctx.createGain();
+  o.frequency.value = f; o2.frequency.value = f*3.98; g2.gain.setValueAtTime(.3, t); g2.gain.setTargetAtTime(0, t, .04);
+  o2.connect(g2); g2.connect(g); o.connect(g); g.connect(panned(dest, rnd(-.6, .6)));
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.05*v, t + .004); g.gain.setTargetAtTime(0, t + .005, .3);
+  o.start(t); o2.start(t); o.stop(t + 2.5); o2.stop(t + 2.5);
+}
+function pluck(t, m, v, dest){
+  const o = ctx.createOscillator(), lp = ctx.createBiquadFilter(), g = ctx.createGain();
+  o.type = 'sawtooth'; o.frequency.value = midi(m); lp.type = 'lowpass'; lp.Q.value = 2;
+  lp.frequency.setValueAtTime(2600, t); lp.frequency.setTargetAtTime(380, t, .07);
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.024*v, t + .004); g.gain.setTargetAtTime(0, t + .005, .16);
+  o.connect(lp); lp.connect(g); g.connect(panned(dest, rnd(-.4, .4))); o.start(t); o.stop(t + 1.5);
+}
+function bell(t, m, v, dest){
+  const f = midi(m), o = ctx.createOscillator(), o2 = ctx.createOscillator(), g = ctx.createGain(), g2 = ctx.createGain();
+  o.frequency.value = f; o2.frequency.value = f*2.001; g2.gain.value = .22; o2.connect(g2); g2.connect(g); o.connect(g); g.connect(panned(dest, rnd(-.6, .6)));
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.045*v, t + .02); g.gain.setTargetAtTime(0, t + .02, 1.2);
   o.start(t); o2.start(t); o.stop(t + 9); o2.stop(t + 9);
 }
-
-const hrNow = () => (S.hrLive && Date.now() - lastLive < 15000) ? S.hrLive : (S.hrManual || null);
-function targetBpm(){
-  const m = MODES[S.mode], hr = hrNow();
-  if (!hr) return m.bpm;
-  if (S.mode === 'focus') return clamp(hr, 50, 110);
-  const mins = (Date.now() - startedAt) / 60000, drift = Math.min(20, mins*1.5);
-  return clamp(hr - drift, S.mode === 'sleep' ? 44 : 50, 100);
+const VOICES = { keys, marimba, pluck, bell };
+function bass(t, m, dur, dest){
+  [['sine', .06], ['triangle', .018]].forEach(([type, pk]) => {
+    const o = ctx.createOscillator(), g = ctx.createGain(); o.type = type; o.frequency.value = midi(m);
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(pk, t + .03); g.gain.setTargetAtTime(0, t + dur*.7, .15);
+    o.connect(g); g.connect(dest); o.start(t); o.stop(t + dur + 1);
+  });
+}
+function thump(t, v, dest){
+  const o = ctx.createOscillator(), g = ctx.createGain();
+  o.frequency.setValueAtTime(110, t); o.frequency.exponentialRampToValueAtTime(46, t + .12);
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.11*v, t + .005); g.gain.setTargetAtTime(0, t + .01, .09);
+  o.connect(g); g.connect(dest); o.start(t); o.stop(t + .6);
+}
+function drop(t, dest){
+  const s = ctx.createBufferSource(), bp = ctx.createBiquadFilter(), g = ctx.createGain();
+  s.buffer = NB.white; bp.type = 'bandpass'; bp.frequency.value = rnd(1500, 5500); bp.Q.value = 7;
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(rnd(.04, .14), t + .002); g.gain.setTargetAtTime(0, t + .003, .015);
+  s.connect(bp); bp.connect(g); g.connect(panned(dest, rnd(-.9, .9))); s.start(t, rnd(0, 7), .2);
+}
+function startNature(kind, dest){
+  const nodes = [], src = ctx.createBufferSource(); src.loop = true; nodes.push(src);
+  if (kind === 'lluvia'){
+    src.buffer = NB.pink; const hp = ctx.createBiquadFilter(), lp = ctx.createBiquadFilter(), g = ctx.createGain();
+    hp.type = 'highpass'; hp.frequency.value = 350; lp.type = 'lowpass'; lp.frequency.value = 6500; g.gain.value = .5;
+    src.connect(hp); hp.connect(lp); lp.connect(g); g.connect(dest);
+  } else if (kind === 'mar'){
+    src.buffer = NB.brown; const lp = ctx.createBiquadFilter(), g = ctx.createGain(), l1 = ctx.createOscillator(), l1g = ctx.createGain(), l2g = ctx.createGain();
+    lp.type = 'lowpass'; lp.frequency.value = 700; g.gain.value = .45;
+    l1.frequency.value = rnd(.06, .1); l1g.gain.value = 450; l2g.gain.value = .3; l1.connect(l1g); l1g.connect(lp.frequency); l1.connect(l2g); l2g.connect(g.gain); l1.start(); nodes.push(l1);
+    src.connect(lp); lp.connect(g); g.connect(dest);
+  } else {
+    src.buffer = NB.pink; const bp = ctx.createBiquadFilter(), g = ctx.createGain(); bp.type = 'bandpass'; bp.frequency.value = 500; bp.Q.value = 1.2; g.gain.value = .6;
+    src.connect(bp); bp.connect(g); g.connect(dest); clock.wind = { bp, g };
+  }
+  src.start(ctx.currentTime, rnd(0, 7));
+  return nodes;
 }
 
+/* ---------- Pistas y secuenciador ---------- */
+const scaleNote = (d, oct = 0) => { const i = ((d % 7) + 7) % 7, sh = Math.floor(d / 7); return T.root + sec.shift + 12*(oct + sh) + T.scale[i]; };
+function newSection(first){
+  const prev = sec || { shift:0 };
+  sec = { shift: prev.shift, tone:1, mel:1, arpOff:false, arp:T.arp, prog:T.prog };
+  if (!first){
+    sec.tone = rnd(.8, 1.2); sec.mel = rnd(.4, 1.6);
+    if (T.arp){ sec.arpOff = Math.random() < .2; if (T.pal === 'electronico') sec.arp = choose([1, 2]); }
+    if (Math.random() < .45) sec.prog = choose(PROGS);
+    if (Math.random() < .2) sec.shift = clamp(prev.shift + choose([5, -5, 2, -2]), -5, 5);
+    applyParams();
+  }
+  clock.nextSection = ctx.currentTime + (T.mode === 'focus' ? rnd(90, 180) : rnd(150, 300));
+}
+function startTrack(p, seed){
+  const t = ctx.currentTime;
+  if (cur){ const old = cur; [old.music, old.nat].forEach(g => { g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(g.gain.value, t); g.gain.linearRampToValueAtTime(0, t + 4); });
+    setTimeout(() => { old.nodes.forEach(n => { try { n.stop(); } catch(e){} }); try { old.music.disconnect(); old.nat.disconnect(); } catch(e){} }, 5000); }
+  T = makeTrack(p, seed); sec = null; clock = {}; trackStart = Date.now();
+  const music = ctx.createGain(), nat = ctx.createGain(); music.connect(musicIn); nat.connect(natureOut);
+  music.gain.setValueAtTime(0, t); music.gain.linearRampToValueAtTime(1, t + 4); nat.gain.setValueAtTime(0, t); nat.gain.linearRampToValueAtTime(1, t + 5);
+  cur = { music, nat, nodes: T.nature ? startNature(T.nature, nat) : [] };
+  ['amRate','amDepth','noise','noiseVol','music','cutoff'].forEach(k => S[k] = T[k]);
+  newSection(true); applyParams(); syncSliders();
+  Object.assign(clock, { step:0, nextStep:t + .4, nextChord:t + .1, chords:[], ci:0, melDeg:9, arpI:0, nextDrop:t + 1, nextWind:t });
+  bpm = T.mode === 'focus' ? T.tempo : targetBpm();
+  const bg = breathGain.gain; bg.cancelScheduledValues(t); bg.setValueAtTime(bg.value, t);
+  if (T.breath){ breathT0 = clock.nextBreath = t + .3; } else { clock.nextBreath = Infinity; bg.setTargetAtTime(1, t, .8); }
+  showTrack();
+  try { navigator.mediaSession.metadata = new MediaMetadata({ title:T.name, artist:'Sosiego · ' + MODE_LABEL[T.mode] }); } catch(e){}
+}
+const chordAt = t => { let d = 0; for (const c of clock.chords) if (c.t <= t + .001) d = c.d; return d; };
+function arpNote(t, deg){
+  const tones = [0, 2, 4, 7].map(x => scaleNote(deg + x, 1)), n = tones.length, i = clock.arpI++;
+  let k; switch (T.arpPat){ case 'up': k = i % n; break; case 'updown': { const c = i % (2*n - 2); k = c < n ? c : 2*n - 2 - c; break; }
+    case 'alberti': k = [0, 2, 1, 2][i % 4]; break; default: k = Math.floor(Math.random()*n); }
+  VOICES[T.arpVoice](t, tones[k], (clock.step % 4 === 0 ? 1 : .7) * (T.arpVoice === 'keys' ? .7 : 1), cur.music);
+}
+function melodyNote(t, deg){
+  let d = clock.melDeg + choose([-2, -1, -1, 1, 1, 2]);
+  if (Math.random() < .55){ const ct = [deg, deg + 2, deg + 4].map(x => ((x % 7) + 7) % 7); while (!ct.includes(((d % 7) + 7) % 7)) d++; }
+  clock.melDeg = d = clamp(d, 7, 16);
+  VOICES[T.melVoice](t, scaleNote(d, 1), rnd(.6, 1), cur.music);
+}
+const hrNow = () => (S.hrLive && Date.now() - lastLive < 15000) ? S.hrLive : (S.hrManual || null);
+function targetBpm(){
+  if (!T) return 60; if (T.mode === 'focus') return T.tempo;
+  const hr = hrNow(); if (!hr) return T.tempo;
+  const mins = (Date.now() - startedAt) / 60000; return clamp(hr - Math.min(20, mins*1.5), T.mode === 'sleep' ? 44 : 50, 100);
+}
 function tick(){
-  if (!ctx || !running) return;
-  const now = ctx.currentTime, ahead = now + 2.5;
-  while (nextChord < ahead){ playChord(nextChord); nextChord += S.chord; }
-  while (nextBeat < ahead){
-    bpm += clamp(targetBpm() - bpm, -.7, .7);
-    if (S.bells > 0 && Math.random() < S.bells*.22 && nextBeat - lastBell > 2){ bell(nextBeat); lastBell = nextBeat; }
-    nextBeat += 60 / bpm;
+  if (!ctx || !running || !T) return;
+  const now = ctx.currentTime, ahead = now + 1.5;
+  if (now >= clock.nextSection) newSection(false);
+  while (clock.nextChord < ahead){
+    const prog = sec.prog, deg = prog[clock.ci++ % prog.length], dur = T.chordBeats * 60 / bpm, t = clock.nextChord;
+    clock.chords.push({ t, d:deg }); if (clock.chords.length > 6) clock.chords.shift();
+    pad(t, [scaleNote(deg - 7), scaleNote(deg + 4), scaleNote(deg + 7), scaleNote(deg + 9), scaleNote(deg + 13)], dur, T.padTimbre, cur.music);
+    clock.nextChord += dur;
   }
-  while (nextBreath < ahead){
-    const g = breathGain.gain, t = nextBreath;
-    g.setValueAtTime(.6, t); g.linearRampToValueAtTime(1, t + 4); g.linearRampToValueAtTime(.6, t + 10);
-    nextBreath += 10;
+  while (clock.nextStep < ahead){
+    const t = clock.nextStep, s = clock.step, deg = chordAt(t), sd = 60 / bpm / 4;
+    if (sec.arp && !sec.arpOff && s % sec.arp === 0) arpNote(t, deg);
+    if (T.bass && s % T.bass === 0) bass(t, scaleNote(deg - 7), sd * T.bass, cur.music);
+    if (T.thump && s % 4 === 0 && !sec.arpOff) thump(t, s % 16 === 0 ? 1 : .65, cur.music);
+    if (s % 4 === 0){
+      if (Math.random() < T.melProb * sec.mel) melodyNote(t, deg);
+      bpm += clamp(targetBpm() - bpm, -.7, .7);
+    }
+    clock.step++; clock.nextStep += sd;
   }
+  if (T.nature === 'lluvia') while (clock.nextDrop < ahead){ drop(clock.nextDrop, cur.nat); clock.nextDrop += -Math.log(1 - Math.random()) * .09; }
+  if (T.nature === 'viento' && clock.wind && now >= clock.nextWind){
+    clock.wind.bp.frequency.setTargetAtTime(rnd(250, 1100), now, 2); clock.wind.g.gain.setTargetAtTime(rnd(.3, .8), now, 2.5); clock.nextWind = now + rnd(3, 7);
+  }
+  while (clock.nextBreath < ahead){
+    const g = breathGain.gain, t = clock.nextBreath;
+    if (T.breath === 'box'){ g.setValueAtTime(.6, t); g.linearRampToValueAtTime(1, t + 4); g.setValueAtTime(1, t + 8); g.linearRampToValueAtTime(.6, t + 12); clock.nextBreath += 16; }
+    else { g.setValueAtTime(.6, t); g.linearRampToValueAtTime(1, t + 4); g.linearRampToValueAtTime(.6, t + 10); clock.nextBreath += 10; }
+  }
+  if (Date.now() - lastArc > 3000){ lastArc = Date.now(); applyParams(); }
+  if (pomo && Date.now() >= pomo.until) pomoSwitch();
   if (endAt){
     const left = endAt - Date.now();
-    if (left <= 20000 && !tick.fading){ tick.fading = true;
-      const t = ctx.currentTime; fade.gain.cancelScheduledValues(t); fade.gain.setValueAtTime(fade.gain.value, t); fade.gain.linearRampToValueAtTime(0, t + Math.max(1, left/1000)); }
+    if (left <= 20000 && !tick.fading){ tick.fading = true; const t = ctx.currentTime; fade.gain.cancelScheduledValues(t); fade.gain.setValueAtTime(fade.gain.value, t); fade.gain.linearRampToValueAtTime(0, t + Math.max(1, left/1000)); }
     if (left <= 0){ tick.fading = false; stop(.1); }
   } else tick.fading = false;
 }
 
+async function start(p){
+  S.profile = p; save();
+  await initAudio();
+  const t = ctx.currentTime; fade.gain.setValueAtTime(0, t); fade.gain.linearRampToValueAtTime(1, t + 4);
+  running = true; startedAt = Date.now(); setTimer();
+  startTrack(p, (Math.random()*2**32) >>> 0); setBinaural(S.binaural); applyParams(true);
+  tickTimer = setInterval(tick, 150); tick(); uiTimer = setInterval(updateRemain, 500);
+  try { navigator.wakeLock && (wakeLock = await navigator.wakeLock.request('screen')); } catch(e){}
+  try { navigator.mediaSession.setActionHandler('pause', () => stop()); navigator.mediaSession.setActionHandler('play', () => S.profile && start(S.profile));
+        navigator.mediaSession.setActionHandler('nexttrack', () => nextTrack()); } catch(e){}
+  await ctx.resume(); setPlayUI();
+}
+function stop(secs = 2.5){
+  if (!ctx) return;
+  const c = ctx, t = c.currentTime;
+  clearInterval(tickTimer); clearInterval(uiTimer);
+  fade.gain.cancelScheduledValues(t); fade.gain.setValueAtTime(fade.gain.value, t); fade.gain.linearRampToValueAtTime(0, t + secs);
+  setTimeout(() => { try { c.close(); } catch(e){} }, secs*1000 + 300);
+  ctx = null; running = false; bin = null; cur = null; pomo = null;
+  try { wakeLock && wakeLock.release(); } catch(e){} wakeLock = null;
+  try { $('#keep').pause(); } catch(e){}
+  setPlayUI(); $('#remain').textContent = '';
+}
+function setTimer(){
+  if (S.minutes === -1){ endAt = 0; pomo = { phase:'focus', until: Date.now() + 25*60000, round:1 }; }
+  else { pomo = null; endAt = S.minutes > 0 ? Date.now() + S.minutes*60000 : 0; }
+}
+function chime(){ const t = ctx.currentTime; [0, .5, 1].forEach((d, i) => bell(t + d, 76 + [0, 3, 7][i], 1.4, musicOut)); }
+function pomoSwitch(){
+  chime();
+  if (pomo.phase === 'focus'){ pomo.phase = 'break'; pomo.until = Date.now() + 5*60000; startTrack({ ...S.profile, activity:'relajar' }, (Math.random()*2**32) >>> 0); }
+  else { pomo.phase = 'focus'; pomo.round++; pomo.until = Date.now() + 25*60000; startTrack(S.profile, (Math.random()*2**32) >>> 0); }
+}
+function nextTrack(p){ if (!S.profile && !p) return openQuestions(); if (p){ S.profile = p; save(); }
+  if (running) startTrack(S.profile, (Math.random()*2**32) >>> 0); else start(S.profile); }
+
+/* ---------- Interfaz ---------- */
+function profileText(p){ return [LABEL[p.activity], LABEL[p.feeling], LABEL[p.palette], p.intensity && isFocus(p.activity) ? 'intensidad ' + p.intensity : ''].filter(Boolean).join(' · '); }
+function showTrack(){
+  $('#trackName').textContent = T ? T.name : '';
+  const palName = { calido:'cálido', cristal:'cristal', naturaleza:'naturaleza', electronico:'electrónico' }[T.pal];
+  $('#trackMeta').textContent = (pomo && pomo.phase === 'break' ? 'Descanso: levántate, estira, bebe agua · ' : S.task ? '«' + S.task + '» · ' : '') + MODE_LABEL[T.mode] + ' · ' + palName + (T.nature ? ' (' + T.nature + ')' : '');
+}
+function syncSliders(){
+  $('#vol').value = S.volume; $('#music').value = S.music; $('#noiseVol').value = S.noiseVol; $('#natureVol').value = S.natureVol;
+  $('#noiseType').value = S.noise; $('#amDepth').value = S.amDepth; $('#amRate').value = S.amRate;
+  $('#binaural').checked = S.binaural; $('#timeAdapt').checked = S.timeAdapt; $('#spatial').checked = S.spatial; $('#taskIn').value = S.task || '';
+  const pc = v => Math.round(v*100) + '%', band = r => r < 8 ? 'theta' : r < 13 ? 'alfa' : 'beta';
+  $('#volO').textContent = pc(S.volume); $('#musicO').textContent = pc(S.music); $('#noiseVolO').textContent = pc(S.noiseVol/.6); $('#natureVolO').textContent = pc(S.natureVol);
+  $('#amDepthO').textContent = S.amDepth ? pc(S.amDepth/.85) : 'apagada'; $('#amRateO').textContent = S.amRate + ' Hz · ' + band(S.amRate);
+  $('#hrIn').value = S.hrManual || '';
+}
+function setPlayUI(){
+  $('#play').textContent = running ? '❚❚ Pausar' : '▶ Empezar';
+  ['#next','#like','#dislike'].forEach(id => $(id).disabled = !running && id !== '#next');
+  if (!running){ $('#orbMain').textContent = 'Sosiego'; $('#orbSub').textContent = S.profile ? profileText(S.profile) : 'toca Empezar'; }
+}
 function updateRemain(){
   if (!running){ $('#remain').textContent = ''; return; }
+  if (pomo){ const s = Math.max(0, Math.round((pomo.until - Date.now())/1000));
+    $('#remain').textContent = (pomo.phase === 'focus' ? 'enfoque ' + pomo.round : 'descanso') + ' · ' + String(Math.floor(s/60)).padStart(2,'0') + ':' + String(s%60).padStart(2,'0'); return; }
   if (!endAt){ $('#remain').textContent = 'sin límite'; return; }
   const s = Math.max(0, Math.round((endAt - Date.now())/1000));
   $('#remain').textContent = 'quedan ' + String(Math.floor(s/60)).padStart(2,'0') + ':' + String(s%60).padStart(2,'0');
 }
-
-/* ---------- Modos / UI ---------- */
-function loadMode(key, fromUser){
-  const m = MODES[key]; S.mode = key;
-  ['amRate','amDepth','noise','noiseVol','music','cutoff','chord','bells','breath'].forEach(k => S[k] = m[k]);
-  document.querySelectorAll('#modes button').forEach(b => b.setAttribute('aria-pressed', b.dataset.mode === key));
-  $('#modeDesc').textContent = m.desc;
-  syncSliders(); save();
-  if (ctx && running){
-    applyParams();
-    const t = ctx.currentTime, p = breathGain.gain;
-    p.cancelScheduledValues(t); p.setValueAtTime(p.value, t);
-    if (m.breath){ breathT0 = nextBreath = t + .3; } else { nextBreath = Infinity; p.setTargetAtTime(1, t + .01, .8); }
-    bpm = targetBpm();
-    try { navigator.mediaSession.metadata = new MediaMetadata({ title:'Sosiego · ' + m.label, artist:'Sonido adaptativo' }); } catch(e){}
-  }
-}
-function syncSliders(){
-  $('#vol').value = S.volume; $('#music').value = S.music; $('#noiseVol').value = S.noiseVol;
-  $('#noiseType').value = S.noise; $('#amDepth').value = S.amDepth; $('#amRate').value = S.amRate;
-  $('#binaural').checked = S.binaural; $('#timeAdapt').checked = S.timeAdapt;
-  const pc = v => Math.round(v*100) + '%', band = r => r < 8 ? 'theta' : r < 13 ? 'alfa' : 'beta';
-  $('#volO').textContent = pc(S.volume); $('#musicO').textContent = pc(S.music); $('#noiseVolO').textContent = pc(S.noiseVol/.6);
-  $('#amDepthO').textContent = S.amDepth ? pc(S.amDepth/.8) : 'apagada';
-  $('#amRateO').textContent = S.amRate + ' Hz · ' + band(S.amRate);
-  $('#hrIn').value = S.hrManual || '';
-}
-function setPlayUI(){ $('#play').textContent = running ? '❚❚ Pausar' : '▶ Empezar'; if (!running){ $('#orbMain').textContent = MODES[S.mode].label; $('#orbSub').textContent = 'toca Empezar'; } }
-async function toggle(){ if (running) stop(); else { try { await start(); } catch(e){ console.error(e); $('#orbSub').textContent = 'no se pudo iniciar el audio'; } } }
-
-function suggest(){
-  const h = new Date().getHours(), k = (h>=6&&h<17) ? 'focus' : (h>=17&&h<22) ? 'calm' : 'sleep';
-  document.querySelectorAll('#modes .sug').forEach(s => s.textContent = '');
-  const b = document.querySelector('#modes button[data-mode="' + k + '"] .sug'); if (b) b.textContent = 'sugerido ahora';
-}
 function updateRhythmInfo(){
-  const hr = hrNow(), el = $('#rhythmInfo');
-  el.textContent = hr ? ('Tu ritmo: ' + Math.round(hr) + ' lpm' + (running ? ' · pulso guía: ' + Math.round(bpm) + ' lpm' : '')) : 'Sin pulso indicado: se usa un ritmo estándar para cada modo.';
+  const hr = hrNow();
+  $('#rhythmInfo').textContent = (hr ? 'Tu ritmo: ' + Math.round(hr) + ' lpm' : 'Sin pulso indicado.') + (running ? ' · tempo del sonido: ' + Math.round(bpm) + ' lpm' : '');
 }
 
-document.querySelectorAll('#modes button').forEach(b => b.addEventListener('click', () => loadMode(b.dataset.mode, true)));
-document.querySelectorAll('#dur button').forEach(b => b.addEventListener('click', () => {
-  S.minutes = +b.dataset.min; save(); markDur();
-  if (running){ endAt = S.minutes ? Date.now() + S.minutes*60000 : 0; }
-}));
-function markDur(){ document.querySelectorAll('#dur button').forEach(b => b.setAttribute('aria-pressed', +b.dataset.min === S.minutes)); }
-$('#play').addEventListener('click', toggle);
-[['vol','volume'],['music','music'],['noiseVol','noiseVol'],['amDepth','amDepth'],['amRate','amRate']].forEach(([id, key]) =>
+/* preguntas */
+let qAns = {}, qIdx = 0;
+function openQuestions(){
+  qAns = {}; qIdx = 0;
+  const r = $('#repeat');
+  if (S.profile){ r.hidden = false; r.textContent = '↺ Igual que la última vez: ' + profileText(S.profile); } else r.hidden = true;
+  $('#modal').classList.add('open'); renderQ();
+}
+const activeQs = () => QUESTIONS.filter(q => !q.when || q.when(qAns));
+function renderQ(){
+  const qs = activeQs(), q = qs[qIdx];
+  $('#qTitle').textContent = q.t; $('#qStep').textContent = 'Pregunta ' + (qIdx + 1) + ' de ' + qs.length;
+  const rec = q.rec ? q.rec(qAns) : null, box = $('#qOpts'); box.innerHTML = '';
+  q.o.forEach(([k, l]) => { const b = document.createElement('button'); b.textContent = l;
+    if (k === rec){ const s = document.createElement('small'); s.textContent = 'recomendado para cómo te sientes'; b.appendChild(s); }
+    b.addEventListener('click', () => answer(q.id, k)); box.appendChild(b); });
+  $('#qBack').style.visibility = qIdx ? 'visible' : 'hidden';
+  const f = box.querySelector('button'); f && f.focus();
+}
+function answer(id, k){
+  qAns[id] = k; const qs = activeQs();
+  if (qIdx + 1 < qs.length){ qIdx++; renderQ(); return; }
+  $('#modal').classList.remove('open'); finish({ ...qAns });
+}
+async function finish(p){ try { if (running) nextTrack(p); else await start(p); } catch(e){ console.error(e); $('#orbSub').textContent = 'no se pudo iniciar el audio'; } }
+$('#repeat').addEventListener('click', () => { $('#modal').classList.remove('open'); finish({ ...S.profile }); });
+$('#qBack').addEventListener('click', () => { if (qIdx){ qIdx--; renderQ(); } });
+$('#qClose').addEventListener('click', () => $('#modal').classList.remove('open'));
+document.addEventListener('keydown', e => { if (e.key === 'Escape') $('#modal').classList.remove('open'); });
+
+$('#play').addEventListener('click', () => running ? stop() : openQuestions());
+$('#ask').addEventListener('click', openQuestions);
+$('#next').addEventListener('click', () => nextTrack());
+function rate(delta){
+  if (!T) return; S.likes[T.pal] = clamp((S.likes[T.pal] || 0) + delta, -4, 6); save();
+  const b = delta > 0 ? $('#like') : $('#dislike'); b.classList.add('on'); setTimeout(() => b.classList.remove('on'), 900);
+  if (delta < 0) nextTrack();
+}
+$('#like').addEventListener('click', () => rate(1));
+$('#dislike').addEventListener('click', () => rate(-1));
+$$('#dur button').forEach(b => b.addEventListener('click', () => { S.minutes = +b.dataset.min; save(); markDur(); if (running){ setTimer(); tick.fading = false; fade.gain.cancelScheduledValues(ctx.currentTime); fade.gain.setTargetAtTime(1, ctx.currentTime, .5); } }));
+function markDur(){ $$('#dur button').forEach(b => b.setAttribute('aria-pressed', +b.dataset.min === S.minutes)); }
+[['vol','volume'],['music','music'],['noiseVol','noiseVol'],['natureVol','natureVol'],['amDepth','amDepth'],['amRate','amRate']].forEach(([id, key]) =>
   $('#' + id).addEventListener('input', e => { S[key] = +e.target.value; syncSliders(); applyParams(); if (key === 'volume') save(); }));
-$('#noiseType').addEventListener('change', e => { S.noise = e.target.value; applyParams(); });
+$('#noiseType').addEventListener('change', e => { S.noise = e.target.value; if (S.noise !== 'none' && S.noiseVol < .05){ S.noiseVol = .15; syncSliders(); } applyParams(); });
+$('#spatial').addEventListener('change', e => { S.spatial = e.target.checked; save(); applyParams(); });
+$('#taskIn').addEventListener('input', e => { S.task = e.target.value.trim(); save(); if (T) showTrack(); });
 $('#binaural').addEventListener('change', e => { S.binaural = e.target.checked; save(); setBinaural(S.binaural); });
 $('#timeAdapt').addEventListener('change', e => { S.timeAdapt = e.target.checked; save(); applyParams(); });
 $('#hrIn').addEventListener('change', e => { const v = +e.target.value; S.hrManual = v >= 40 && v <= 180 ? Math.round(v) : null; save(); syncSliders(); });
-
 let taps = [];
 $('#tap').addEventListener('click', () => {
-  const n = performance.now();
-  if (taps.length && n - taps[taps.length-1] > 2500) taps = [];
+  const n = performance.now(); if (taps.length && n - taps[taps.length-1] > 2500) taps = [];
   taps.push(n); taps = taps.slice(-8);
-  if (taps.length >= 4){
-    const iv = (taps[taps.length-1] - taps[0]) / (taps.length-1), v = Math.round(60000/iv);
-    if (v >= 40 && v <= 180){ S.hrManual = v; save(); syncSliders(); }
-  }
+  if (taps.length >= 4){ const v = Math.round(60000 / ((taps[taps.length-1] - taps[0]) / (taps.length-1))); if (v >= 40 && v <= 180){ S.hrManual = v; save(); syncSliders(); } }
 });
-
 if (navigator.bluetooth){
-  $('#btRow').hidden = false; $('#btNote').hidden = false;
+  $('#btRow').hidden = false;
   $('#btHr').addEventListener('click', async () => {
     try {
       $('#btState').textContent = 'buscando…';
       const dev = await navigator.bluetooth.requestDevice({ filters:[{ services:['heart_rate'] }] });
-      const srv = await dev.gatt.connect(), svc = await srv.getPrimaryService('heart_rate');
-      const ch = await svc.getCharacteristic('heart_rate_measurement'); await ch.startNotifications();
-      ch.addEventListener('characteristicvaluechanged', e => {
-        const v = e.target.value, hr = (v.getUint8(0) & 1) ? v.getUint16(1, true) : v.getUint8(1);
-        if (hr >= 30 && hr <= 220){ S.hrLive = S.hrLive ? S.hrLive*.85 + hr*.15 : hr; lastLive = Date.now(); }
-      });
+      const ch = await (await (await dev.gatt.connect()).getPrimaryService('heart_rate')).getCharacteristic('heart_rate_measurement'); await ch.startNotifications();
+      ch.addEventListener('characteristicvaluechanged', e => { const v = e.target.value, hr = (v.getUint8(0) & 1) ? v.getUint16(1, true) : v.getUint8(1);
+        if (hr >= 30 && hr <= 220){ S.hrLive = S.hrLive ? S.hrLive*.85 + hr*.15 : hr; lastLive = Date.now(); } });
       dev.addEventListener('gattserverdisconnected', () => { S.hrLive = null; $('#btState').textContent = 'desconectado'; });
       $('#btState').textContent = 'conectado a ' + (dev.name || 'pulsómetro');
     } catch(e){ $('#btState').textContent = 'no se pudo conectar'; }
   });
 }
 
-/* ---------- Animación del orbe ---------- */
-const orb = $('#orb'); let lvl = 0, smooth = 0;
+/* orbe */
+const orb = $('#orb'); let smooth = 0;
 const ease = p => .5 - .5*Math.cos(Math.PI*p);
 function frame(){
-  const T = performance.now()/1000; let scale, main = null, sub = null;
-  if (ctx && running){
+  const now = performance.now()/1000; let scale;
+  if (ctx && running && T){
     const buf = frame.buf || (frame.buf = new Float32Array(512)); analyser.getFloatTimeDomainData(buf);
     let s = 0; for (let i = 0; i < buf.length; i++) s += buf[i]*buf[i]; smooth += (Math.sqrt(s/buf.length) - smooth)*.1;
-    if (S.breath){
-      const ph = (((ctx.currentTime - breathT0) % 10) + 10) % 10;
-      if (ph < 4){ lvl = ease(ph/4); main = 'Inhala'; } else { lvl = 1 - ease((ph-4)/6); main = 'Exhala'; }
-      scale = .78 + .32*lvl;
-    } else scale = .9 + Math.sin(T*.5)*.03 + Math.min(.12, smooth*.8);
-    sub = Math.round(bpm) + ' lpm' + (S.amDepth > 0 ? ' · ' + S.amRate + ' Hz' : '');
-    $('#orbMain').textContent = main || MODES[S.mode].label; $('#orbSub').textContent = sub;
-  } else scale = .88 + Math.sin(T*.6)*.02;
+    let main = MODE_LABEL[T.mode];
+    if (T.breath === 'box'){ const ph = (((ctx.currentTime - breathT0) % 16) + 16) % 16; let l;
+      if (ph < 4){ l = ease(ph/4); main = 'Inhala'; } else if (ph < 8){ l = 1; main = 'Mantén'; } else if (ph < 12){ l = 1 - ease((ph-8)/4); main = 'Exhala'; } else { l = 0; main = 'Mantén'; }
+      scale = .78 + .32*l; }
+    else if (T.breath){ const ph = (((ctx.currentTime - breathT0) % 10) + 10) % 10; let l; if (ph < 4){ l = ease(ph/4); main = 'Inhala'; } else { l = 1 - ease((ph-4)/6); main = 'Exhala'; } scale = .78 + .32*l; }
+    else scale = .9 + Math.sin(now*.5)*.03 + Math.min(.12, smooth*.8);
+    $('#orbMain').textContent = main; $('#orbSub').textContent = Math.round(bpm) + ' lpm' + (S.amDepth > 0 ? ' · ' + S.amRate + ' Hz' : '');
+    orb.style.filter = 'hue-rotate(' + ((T.seed % 90) - 45) + 'deg)';
+  } else scale = .88 + Math.sin(now*.6)*.02;
   orb.style.transform = 'scale(' + scale.toFixed(3) + ')';
   requestAnimationFrame(frame);
 }
-
-document.addEventListener('visibilitychange', async () => {
-  if (document.visibilityState === 'visible' && running && !wakeLock){ try { wakeLock = await navigator.wakeLock.request('screen'); } catch(e){} }
-});
+document.addEventListener('visibilitychange', async () => { if (document.visibilityState === 'visible' && running && !wakeLock){ try { wakeLock = await navigator.wakeLock.request('screen'); } catch(e){} } });
 setInterval(updateRhythmInfo, 1000);
-setInterval(suggest, 60000);
 
-/* ---------- Arranque ---------- */
-markDur(); loadMode(S.mode); suggest(); setPlayUI(); updateRhythmInfo(); requestAnimationFrame(frame);
+markDur(); syncSliders(); setPlayUI(); updateRhythmInfo(); requestAnimationFrame(frame);
 try { if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {}); } catch(e){}
 })();
 </script>

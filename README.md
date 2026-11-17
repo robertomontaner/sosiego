@@ -8,17 +8,29 @@ Todo el sonido se **genera en tu dispositivo** con la Web Audio API: no hay serv
 
 ## Qué hace
 
-| Modo | Qué suena | Para qué |
-|---|---|---|
-| **Enfoque** | Acordes suaves con **modulación de amplitud** rápida (16 Hz por defecto) + ruido marrón | Tareas largas, estudio, TDAH |
-| **Calma** | Acordes lentos, campanitas, ruido rosa suave y **guía de respiración** (inhala 4 s / exhala 6 s) | Ansiedad, bajar revoluciones |
-| **Dormir** | Sonido muy grave y casi inmóvil, ruido marrón, fundido final largo | Conciliar el sueño |
+Al pulsar **Empezar**, Sosiego te hace 3 o 4 preguntas rápidas y genera una pista a tu medida:
 
-### Adaptación a la persona
+1. **¿Qué vas a hacer?** Trabajar/estudiar, crear, leer, relajarte, meditar o dormir. Decide el modo (Enfoque, Calma o Dormir).
+2. **¿Cómo te sientes?** Disperso, ansioso, cansado o bien. Ajusta tempo, brillo e intensidad.
+3. **¿Qué sonido te apetece?** Cálido (piano eléctrico y pads), cristal (campanas y marimba), naturaleza (lluvia, mar o viento), electrónico (pulso suave) o sorpréndeme.
+4. **¿Cuánta intensidad?** (solo en Enfoque) Suave, media o alta. Controla la profundidad de la modulación.
 
-- **Tu pulso**: escribe tus latidos por minuto, márcalos tocando al ritmo en la muñeca, o conecta un **pulsómetro Bluetooth** (Web Bluetooth, perfil estándar *Heart Rate*). Las campanas siguen ese ritmo; en Calma y Dormir el pulso guía va bajando poco a poco hasta ~20 lpm por debajo del tuyo.
-- **Hora del día**: el brillo del sonido (filtro paso bajo) es más claro por la mañana y más oscuro por la noche, y se sugiere el modo según la hora.
-- **Todo ajustable**: intensidad y velocidad de la modulación, tipo y nivel de ruido, binaurales opcionales, duración de sesión con fundido de salida.
+### Variedad
+- Cada pista se **genera al momento** a partir de una semilla: tonalidad, escala, progresión de acordes, tempo, instrumentos, patrón de arpegio, bajo y paisaje natural. Nunca suena igual dos veces y cada una tiene nombre propio.
+- La pista **evoluciona por secciones** (cada 1,5–5 min): cambian la densidad, la melodía, los acordes, el brillo y a veces la tonalidad.
+- **⟳ Otra pista** genera una nueva con las mismas respuestas. **👍 / 👎** ajustan qué tipo de sonido te propone «Sorpréndeme» (se guarda solo en tu dispositivo).
+
+### Efecto
+- En Enfoque, la **modulación de amplitud** (16 Hz) se aplica a toda la música, incluida la reverberación, y hay pulso rítmico (arpegio, bajo y, en electrónico, un latido suave).
+- **Arco de sesión**: la modulación empieza suave, sube durante los primeros ~2,5 minutos y baja en los últimos 2.
+- **Ritmo del día**: en los bajones típicos (14–16 h, noche) el Enfoque es algo menos intenso.
+- **Movimiento espacial**: el sonido gira lentamente a tu alrededor (muy leve en Enfoque).
+- **Calma**: guía de respiración 4–6 (inhala 4 s, exhala 6 s); al meditar, respiración cuadrada 4–4–4–4.
+
+### Sesión
+- **Pomodoro 25/5**: 25 min de enfoque y 5 de descanso con sonido de calma, avisos con campanas, en bucle.
+- Duraciones fijas con fundido final, o sin límite. Campo opcional para escribir en qué te vas a centrar.
+- **Pulso cardiaco (opcional)**: entrada manual, por toques o pulsómetro Bluetooth. En Calma y Dormir el tempo lo sigue y lo baja poco a poco.
 
 ## Lo que dice la ciencia (y lo que no)
 
