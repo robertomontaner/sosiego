@@ -438,13 +438,18 @@ function newSection(first){
   const prev = sec || { shift:0 };
   sec = { shift: prev.shift, tone:1, mel:1, arpOff:false, arp:T.arp, prog:T.prog };
   if (!first){
-    sec.tone = rnd(.8, 1.2); sec.mel = rnd(.4, 1.6);
-    if (T.arp){ sec.arpOff = Math.random() < .2; if (T.pal === 'electronico') sec.arp = choose([1, 2]); }
-    if (Math.random() < .45) sec.prog = choose(PROGS);
-    if (Math.random() < .2) sec.shift = clamp(prev.shift + choose([5, -5, 2, -2]), -5, 5);
+    if (T.mode === 'focus'){
+      // En Enfoque la estabilidad manda: sin cambios de tonalidad ni cortes de ritmo, solo matices lentos
+      sec.tone = rnd(.92, 1.08); sec.mel = rnd(.8, 1.2);
+      if (Math.random() < .3) sec.prog = choose(PROGS);
+    } else {
+      sec.tone = rnd(.8, 1.2); sec.mel = rnd(.4, 1.6);
+      if (Math.random() < .45) sec.prog = choose(PROGS);
+      if (Math.random() < .2) sec.shift = clamp(prev.shift + choose([5, -5, 2, -2]), -5, 5);
+    }
     applyParams();
   }
-  clock.nextSection = ctx.currentTime + (T.mode === 'focus' ? rnd(90, 180) : rnd(150, 300));
+  clock.nextSection = ctx.currentTime + (T.mode === 'focus' ? rnd(180, 300) : rnd(150, 300));
 }
 function startTrack(p, seed){
   const t = ctx.currentTime;
@@ -514,7 +519,8 @@ function tick(){
   }
   if (Date.now() - lastArc > 3000){ lastArc = Date.now(); applyParams(); }
   if (now >= (clock.nextDrift || 0)){   // el ruido varía despacio de nivel y color para no ser monótono
-    const n = noises[S.noise]; if (n){ n.g.gain.setTargetAtTime(S.noiseVol * rnd(.8, 1.1), now, 4); n.lp.frequency.setTargetAtTime(n.base * rnd(.6, 1.1), now, 5); }
+    const n = noises[S.noise], fo = T.mode === 'focus';
+    if (n){ n.g.gain.setTargetAtTime(S.noiseVol * (fo ? rnd(.93, 1.04) : rnd(.8, 1.1)), now, 6); n.lp.frequency.setTargetAtTime(n.base * (fo ? rnd(.85, 1.05) : rnd(.6, 1.1)), now, 8); }
     clock.nextDrift = now + rnd(8, 16);
   }
   if (pomo && Date.now() >= pomo.until) pomoSwitch();
