@@ -35,7 +35,7 @@ Al pulsar **Empezar**, Sosiego te hace 3 o 4 preguntas rápidas y genera una pis
 ### Ambientes
 Escenas realistas generadas por código en la GPU (WebGL, sin vídeos): **Planetario** (Tierra con texturas reales, Saturno y el Sol), **Nubes** (el cielo sigue la hora del día), **Bosque** con niebla y rayos de sol, **Bajo el agua**, **Coche bajo la lluvia**, **Cabaña** con chimenea, **Fogata** y **Tren**. Hay una versión ligera dibujada en 2D (opción «Gráficos realistas») y el diseño **Clásico · origen** (también en la rama `clasico-origen`). Cada ambiente tiene su propio sonido generado por la app (lluvia, fuego, agua, viento con pájaros, tren), opcional y con volumen aparte.
 
-**Créditos de imagen:** las texturas de la Tierra (`assets/earth.jpg`, `assets/clouds.jpg`) proceden de los ejemplos de [three.js](https://github.com/mrdoob/three.js) (licencia MIT) y están basadas en imágenes *Blue Marble* de la NASA (dominio público).
+**Créditos de imagen:** las texturas de la Tierra (`assets/earth.jpg`, `assets/earth_maps.jpg`, `assets/moon.jpg`: superficie, nubes, luces nocturnas, océanos y Luna) proceden de los ejemplos de [three.js](https://github.com/mrdoob/three.js) (licencia MIT) y están basadas en imágenes *Blue Marble* de la NASA (dominio público).
 
 ## Lo que dice la ciencia (y lo que no)
 

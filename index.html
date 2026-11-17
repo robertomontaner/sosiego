@@ -330,7 +330,7 @@ const GLScenes = (() => {
   const COMMON = `
 precision highp float;
 uniform vec2 uRes; uniform float uTime, uLevel, uBreath, uHour;
-uniform sampler2D uTex0, uTex1;
+uniform sampler2D uTex0, uTex1, uTex2;
 #define PI 3.14159265
 float h11(float p){ p = fract(p*.1031); p *= p + 33.33; p *= p + p; return fract(p); }
 float h21(vec2 p){ vec3 p3 = fract(vec3(p.xyx)*.1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y)*p3.z); }
@@ -673,73 +673,111 @@ void main(){
   gl_FragColor = vec4(aces(col*1.05), 1.);
 }`,
 
-/* ---- Planetario: Tierra con texturas reales, Saturno y el Sol ---- */
+/* ---- Planetario: Tierra con texturas reales, Luna, Saturno y el Sol ---- */
 planetario: `
 vec3 rotY(vec3 p, float a){ float c = cos(a), s = sin(a); return vec3(c*p.x + s*p.z, p.y, -s*p.x + c*p.z); }
 vec3 rotX(vec3 p, float a){ float c = cos(a), s = sin(a); return vec3(p.x, c*p.y - s*p.z, s*p.y + c*p.z); }
 vec3 rotZ(vec3 p, float a){ float c = cos(a), s = sin(a); return vec3(c*p.x - s*p.y, s*p.x + c*p.y, p.z); }
+vec2 sphUV(vec3 pn){ return vec2(atan(pn.x, pn.z)/(2.*PI) + .5, .5 - asin(clamp(pn.y, -1., 1.))/PI); }
+vec3 starField(vec2 uv, float t){
+  vec3 c = vec3(0.);
+  for (int L = 0; L < 3; L++){ float fl = float(L); float d = 70. + fl*90.;
+    vec2 g = uv*d + fl*13.1; vec2 id = floor(g), f = fract(g) - .5; vec2 r = h22(id);
+    float on = step(.86 - fl*.03, r.x); float sz = (.025 + .05*r.y)/(1. + fl*.6);
+    float s = smoothstep(sz, 0., length(f - (r - .5)*.7))*on;
+    vec3 tint = mix(vec3(.75, .85, 1.), vec3(1., .85, .7), h21(id + 3.));
+    c += tint*s*(.7 + .3*sin(t*(1. + 2.*r.y) + r.x*50.))*(1.2 - fl*.3); }
+  return c;
+}
 void main(){
   vec2 uv = (gl_FragCoord.xy - .5*uRes)/uRes.y; float asp = uRes.x/uRes.y; float t = uTime;
   bool port = asp < .85;
-  vec3 col = vec3(.003, .004, .012);
-  float neb = fbm(uv*2.2 + vec2(t*.003, 0.)); float neb2 = fbm(uv*3.5 - 4.);
-  col += vec3(.22, .1, .35)*pow(neb, 3.)*.9 + vec3(.05, .22, .3)*pow(neb2, 4.)*1.1;
-  col += stars(uv, t, 90.) + stars(uv + 7.7, t*1.3, 200.)*.7;
+  // fondo: nebulosa y vía láctea
+  vec3 col = vec3(.002, .003, .009);
+  float mw = exp(-pow((uv.y - uv.x*.35 + .05)*2.6, 2.));
+  col += vec3(.16, .14, .2)*mw*fbm(uv*4. + 1.)*.6;
+  float neb = fbm(uv*1.8 + vec2(t*.002, 0.) + fbm(uv*3.)*.6);
+  col += vec3(.2, .07, .3)*pow(neb, 3.5)*1.1 + vec3(.03, .16, .24)*pow(fbm(uv*2.6 - 4.), 4.)*1.2;
+  col += starField(uv, t)*(1. + mw*.6);
   vec2 sunP = port ? vec2(-asp*.24, -.06) : vec2(-asp*.33, .3);
   vec2 earthP = port ? vec2(asp*.2, .04) : vec2(asp*.27, .12);
   vec2 satP = port ? vec2(asp*.05, -.22) : vec2(-asp*.36, -.17);
   earthP.y += sin(t*.3)*.012; satP.y += sin(t*.25 + 1.)*.01;
-  // Sol
-  float sr = (port ? .05 : .085)*(1. + uLevel*.25 + uBreath*.05);
-  vec2 sq = uv - sunP; float sdd = length(sq);
-  col += vec3(1., .55, .2)*exp(-sdd*6.)*.5 + vec3(1., .75, .4)*(.0009/(sdd*sdd + .0008))*.12;
+  // ---- Sol ----
+  float sr = (port ? .05 : .085)*(1. + uLevel*.2 + uBreath*.05);
+  vec2 sq = uv - sunP; float sdd = length(sq); float sa = atan(sq.y, sq.x);
+  float corona = pow(fbm(vec2(sa*6., sdd*8. - t*.08)), 2.)*exp(-(sdd - sr)*9.)*step(sr*.95, sdd);
+  col += vec3(1., .6, .25)*corona*.9;
+  col += vec3(1., .5, .18)*exp(-sdd*5.)*.45 + vec3(1., .78, .5)*(.0007/(sdd*sdd + .0006))*.14;
   if (sdd < sr){ float mu = sqrt(1. - pow(sdd/sr, 2.));
-    float gran = fbm(sq*90. + t*.15)*.35 + fbm(sq*30. - t*.05)*.3;
-    vec3 sc = mix(vec3(1., .45, .1), vec3(1., .92, .7), pow(mu, .6))*(1.15 + gran*.4);
-    col = mix(col, sc*1.6, smoothstep(sr, sr*.97, sdd)); }
-  vec3 L3 = normalize(vec3(sunP, .6));
-  // Tierra
+    float gran = fbm(sq*120./sr*.08 + t*.12)*.5 + fbm(sq*40./sr*.08 - t*.04)*.35;
+    vec3 sc = mix(vec3(1., .38, .06), vec3(1., .95, .78), pow(mu, .45))*(.9 + gran*.35);
+    col = mix(col, sc*2., smoothstep(sr, sr*.985, sdd)); }
+  // destellos de lente hacia el centro
+  for (int i = 1; i < 4; i++){ float fi = float(i); vec2 gp = sunP*(1. - fi*.55); float gr = .012 + .018*fi;
+    col += vec3(.9, .6, .4)*smoothstep(gr, gr*.7, length(uv - gp))*.025; }
+  // ---- Tierra ----
   float er = port ? .1 : .17; vec2 eq = (uv - earthP)/er; float e2 = dot(eq, eq);
-  vec3 Ld = normalize(vec3(sunP - earthP, .55));
+  vec3 Ld = normalize(vec3(sunP - earthP, .5));
   if (e2 < 1.){ vec3 n = vec3(eq, sqrt(1. - e2));
-    vec3 pn = rotX(rotZ(n, .41), -.15); pn = rotY(pn, t*.03);
-    float lon = atan(pn.x, pn.z), lat = asin(clamp(pn.y, -1., 1.));
-    vec2 tuv = vec2(lon/(2.*PI) + .5, .5 - lat/PI);
-    vec3 alb = texture2D(uTex0, tuv).rgb;
-    float cl = texture2D(uTex1, vec2(fract(tuv.x + t*.002), tuv.y)).r;
-    float dif = max(dot(n, Ld), 0.);
-    float ocean = smoothstep(.1, .3, alb.b - alb.r);
-    vec3 h = normalize(Ld + vec3(0., 0., 1.)); float spec = pow(max(dot(n, h), 0.), 40.)*ocean*.6;
-    vec3 surf = alb*1.1*dif + spec*vec3(1., .9, .75);
-    surf = mix(surf, vec3(1.)*dif*1.05, cl*.9);
-    float night = smoothstep(.1, -.1, dot(n, Ld));
-    surf += vec3(.02, .03, .06)*night;
-    float fres = pow(1. - n.z, 3.);
-    surf += vec3(.3, .55, 1.)*fres*(.25 + .9*smoothstep(-.2, .5, dot(n, Ld)));
+    vec3 pn = rotY(rotX(rotZ(n, .41), -.12), t*.025);
+    vec2 tuv = sphUV(pn);
+    vec3 alb = pow(texture2D(uTex0, tuv).rgb, vec3(1.15));
+    vec3 mp = texture2D(uTex1, tuv).rgb;
+    vec3 pnc = rotY(rotX(rotZ(n, .41), -.12), t*.03);
+    float cl = texture2D(uTex1, sphUV(pnc)).r;
+    float cls = texture2D(uTex1, sphUV(rotY(pnc, -.015))).r; // sombra de las nubes
+    float ndl = dot(n, Ld); float dif = max(ndl, 0.);
+    float ocean = mp.b;
+    vec3 h = normalize(Ld + vec3(0., 0., 1.)); float spec = pow(max(dot(n, h), 0.), 60.)*ocean*.9 + pow(max(dot(n, h), 0.), 8.)*ocean*.08;
+    vec3 surf = alb*dif*(1. - cls*.35) + spec*vec3(1., .88, .7)*(1. - cl);
+    vec3 cloudC = vec3(1.)*(dif*1.05 + .02);
+    surf = mix(surf, cloudC, cl*.92);
+    float nightK = smoothstep(.12, -.12, ndl);
+    surf += vec3(1., .72, .38)*pow(mp.g, 1.3)*nightK*(1. - cl*.8)*1.1;
+    float term = exp(-pow((ndl - .03)*14., 2.));
+    surf += vec3(1., .5, .25)*term*.045*(1. - cl*.3);
+    float fres = pow(1. - n.z, 2.5);
+    surf = mix(surf, vec3(.35, .6, 1.)*(.15 + dif), fres*.55*smoothstep(-.3, .3, ndl + .2));
     col = mix(col, surf, smoothstep(1., .985, e2)); }
-  float halo = smoothstep(1.25, 1., sqrt(e2))*smoothstep(.98, 1.02, sqrt(e2));
-  col += vec3(.3, .55, 1.)*halo*.35*max(.2, dot(normalize(vec3(eq, .2)), Ld));
-  // Saturno
+  float ed = sqrt(e2);
+  col += vec3(.3, .55, 1.)*smoothstep(1.12, 1., ed)*smoothstep(.97, 1.01, ed)*.5*smoothstep(-.3, .6, dot(normalize(vec3(eq, .15)), Ld));
+  // ---- Luna ----
+  float ma = t*.05 + 1.; vec2 moonP = earthP + vec2(cos(ma)*er*2.1, sin(ma)*er*.55);
+  float mr = er*.27; vec2 mq = (uv - moonP)/mr; float m2 = dot(mq, mq);
+  bool behind = sin(ma) > 0. && length(uv - earthP) < er;
+  if (m2 < 1. && !behind){ vec3 n = vec3(mq, sqrt(1. - m2)); vec3 pn = rotY(n, t*.01);
+    float g = texture2D(uTex2, sphUV(pn)).r; vec3 Lm = normalize(vec3(sunP - moonP, .5));
+    vec3 mc = vec3(g*1.1)*max(dot(n, Lm), 0.)*vec3(1., .98, .95);
+    col = mix(col, mc, smoothstep(1., .96, m2)); }
+  // ---- Saturno ----
   float srad = port ? .045 : .08; vec2 sq2 = (uv - satP)/srad;
   float tilt = .38; vec2 rq = vec2(cos(tilt)*sq2.x + sin(tilt)*sq2.y, -sin(tilt)*sq2.x + cos(tilt)*sq2.y);
-  vec2 rr2 = vec2(rq.x, rq.y/.26); float rd = length(rr2);
-  float ringMask = smoothstep(1.35, 1.38, rd)*smoothstep(2.35, 2.3, rd);
-  float bands = .7 + .2*sin(rd*22.) + .1*sin(rd*47.); float cass = smoothstep(.03, 0., abs(rd - 1.95));
-  vec3 ringC = vec3(.86, .76, .6)*bands*(1. - cass*.85);
-  float front = step(0., -rq.y);
-  float p2 = dot(rq*vec2(1., 1.08), rq*vec2(1., 1.08));
+  float incl = .27; vec2 rr2 = vec2(rq.x, rq.y/incl); float rd = length(rr2);
+  // densidad de anillos: C tenue, B brillante, división de Cassini, A, hueco de Encke
+  float ringD = smoothstep(1.24, 1.27, rd)*smoothstep(1.53, 1.5, rd)*.3
+              + smoothstep(1.52, 1.56, rd)*smoothstep(1.95, 1.92, rd)*(.85 + .15*sin(rd*60.))
+              + smoothstep(2.0, 2.03, rd)*smoothstep(2.27, 2.24, rd)*.65*(1. - .8*smoothstep(.012, 0., abs(rd - 2.19)));
+  ringD *= .8 + .2*fbm3(vec2(rd*30., 1.));
+  vec3 ringC = mix(vec3(.72, .64, .52), vec3(.92, .84, .7), smoothstep(1.5, 1.9, rd));
   vec3 Ls = normalize(vec3(sunP - satP, .5));
-  if (front < .5 && ringMask > 0.) col = mix(col, ringC*.9, ringMask*.85);
-  if (p2 < 1.){ vec3 n = vec3(rq*vec2(1., 1.08), sqrt(1. - p2));
-    float lat = n.y; float bnd = sin(lat*18. + fbm3(vec2(lat*10., t*.01))*2.)*.5 + .5;
-    vec3 sc = mix(vec3(.82, .68, .45), vec3(.93, .84, .64), bnd);
-    float dif = max(dot(n, Ls), 0.)*.95 + .05;
-    float rshadow = 1. - .45*smoothstep(.06, 0., abs(n.y + .05))*step(0., n.y + .2);
-    col = mix(col, sc*dif*rshadow, smoothstep(1., .97, p2)); }
-  if (front > .5 && ringMask > 0.){ float shad = 1.; if (rq.y < 0. && abs(rq.x) < 1. && rq.x*Ls.x < 0.) shad = .35;
-    col = mix(col, ringC*shad, ringMask*.88); }
+  float p2 = dot(rq*vec2(1., 1.1), rq*vec2(1., 1.1));
+  float front = step(rq.y, 0.);
+  // sombra del planeta sobre los anillos (lado opuesto al Sol)
+  vec2 sdir = normalize(Ls.xy); float along = dot(rq, -sdir); float perp = abs(rq.x*sdir.y - rq.y*sdir.x);
+  float pshadow = 1. - .85*step(0., along)*smoothstep(1.02, .95, perp);
+  if (front < .5 && ringD > 0.) col = mix(col, ringC*pshadow*(.55 + .45*dot(Ls, vec3(0., 1., 0.)) + .4), clamp(ringD, 0., 1.)*.9);
+  if (p2 < 1.){ vec3 n = vec3(rq*vec2(1., 1.1), sqrt(1. - p2));
+    float lat = n.y + fbm3(vec2(n.x*3., n.y*20. + t*.01))*.04;
+    float bnd = sin(lat*16.)*.5 + .5; float bnd2 = sin(lat*41. + 1.)*.5 + .5;
+    vec3 sc = mix(vec3(.78, .64, .42), vec3(.95, .87, .68), bnd*.7 + bnd2*.3);
+    sc = mix(sc, vec3(.62, .66, .7), smoothstep(.75, .95, abs(n.y))*.5);
+    float dif = max(dot(n, Ls), 0.);
+    float rsh = 1. - .5*smoothstep(.07, 0., abs(n.y + .08 - n.x*.05))*step(-.25, n.y);
+    col = mix(col, sc*(dif*.97 + .03)*rsh*pow(n.z, .15), smoothstep(1., .975, p2)); }
+  if (front > .5 && ringD > 0.) col = mix(col, ringC*pshadow*1.05, clamp(ringD, 0., 1.)*.92);
   col *= 1. - .3*dot(uv/vec2(asp*.7, .8), uv/vec2(asp*.7, .8));
-  gl_FragColor = vec4(aces(col*1.2), 1.);
+  gl_FragColor = vec4(aces(col*1.15), 1.);
 }`
   };
 
@@ -753,14 +791,14 @@ void main(){
     if (!vs || !fs){ progs[name] = null; return null; }
     const pr = gl.createProgram(); gl.attachShader(pr, vs); gl.attachShader(pr, fs); gl.bindAttribLocation(pr, 0, 'p'); gl.linkProgram(pr);
     if (!gl.getProgramParameter(pr, gl.LINK_STATUS)){ console.error(gl.getProgramInfoLog(pr)); progs[name] = null; return null; }
-    const u = {}; ['uRes','uTime','uLevel','uBreath','uHour','uTex0','uTex1'].forEach(k => u[k] = gl.getUniformLocation(pr, k));
+    const u = {}; ['uRes','uTime','uLevel','uBreath','uHour','uTex0','uTex1','uTex2'].forEach(k => u[k] = gl.getUniformLocation(pr, k));
     progs[name] = { pr, u }; return progs[name];
   }
   const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf);
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
   gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
 
-  const tex = [null, null];
+  const tex = [null, null, null];
   function loadTex(i, url){
     const tx = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, tx);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([20, 60, 120, 255]));
@@ -771,7 +809,7 @@ void main(){
     img.src = url;
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
   }
-  loadTex(0, 'assets/earth.jpg'); loadTex(1, 'assets/clouds.jpg');
+  loadTex(0, 'assets/earth.jpg'); loadTex(1, 'assets/earth_maps.jpg'); loadTex(2, 'assets/moon.jpg');
 
   let scale = .6, lastFrame = 0, slow = 0, fast = 0;
   function draw(name, t, st, w, h){
@@ -782,6 +820,7 @@ void main(){
     gl.uniform1f(P.u.uBreath, st.breath == null ? 0 : st.breath); const d = new Date(); gl.uniform1f(P.u.uHour, d.getHours() + d.getMinutes()/60);
     gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, tex[0]); gl.uniform1i(P.u.uTex0, 0);
     gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, tex[1]); gl.uniform1i(P.u.uTex1, 1);
+    gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, tex[2]); gl.uniform1i(P.u.uTex2, 2);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     return true;
   }
