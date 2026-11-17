@@ -102,6 +102,8 @@ body[data-theme=fogata]{--a:#ffb46b;--b:#ff6b4a}
 body[data-theme=tren]{--a:#ffd08a;--b:#e48ab0}
 #scene,#gl{position:fixed;inset:0;width:100vw;height:100vh;z-index:-1;display:block}
 #gl{display:none}
+#bgv{position:fixed;inset:0;width:100vw;height:100vh;object-fit:cover;z-index:-1;display:none;background:#000;transition:filter 1.2s}
+#scrim{position:fixed;inset:0;z-index:-1;pointer-events:none;display:none;background:linear-gradient(rgba(0,0,0,.42),rgba(0,0,0,.05) 32%,rgba(0,0,0,0) 60%,rgba(0,0,0,.38))}
 .glass{background:rgba(16,20,34,.42);-webkit-backdrop-filter:blur(22px) saturate(150%);backdrop-filter:blur(22px) saturate(150%);border:1px solid rgba(255,255,255,.12);box-shadow:0 12px 40px rgba(0,0,0,.28)}
 .topbar{position:fixed;top:12px;left:50%;transform:translateX(-50%);width:min(680px,calc(100% - 24px));display:flex;align-items:center;justify-content:space-between;padding:7px 8px 7px 18px;border-radius:999px;z-index:5}
 .brand{font-weight:650;letter-spacing:-.01em;font-size:17px}
@@ -169,6 +171,8 @@ body:not([data-theme=clasico]) .dock{margin-top:0}
 <body>
 <canvas id="scene" aria-hidden="true"></canvas>
 <canvas id="gl" aria-hidden="true"></canvas>
+<video id="bgv" muted loop playsinline autoplay preload="auto" aria-hidden="true"></video>
+<div id="scrim" aria-hidden="true"></div>
 <nav class="topbar glass">
   <span class="brand">Sosiego</span>
   <div class="tb-actions">
@@ -845,7 +849,11 @@ const Scene = (() => {
   const cv = document.getElementById('scene'), cx = cv.getContext('2d');
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
   let W = 0, H = 0, DPR = 1, theme = 'clasico', realistic = true, t0 = performance.now();
-  const glc = document.getElementById('gl');
+  const glc = document.getElementById('gl'), vid = document.getElementById('bgv'), scrim = document.getElementById('scrim');
+  const VIDEOS = { fogata:1, cabana:1, tren:1, bosque:1, coche:1 }, failed = {};
+  vid.addEventListener('error', () => { if (vid.dataset.th) failed[vid.dataset.th] = true; });
+  const useVideo = th => realistic && VIDEOS[th] && !failed[th];
+  function setVideo(th){ if (vid.dataset.th === th) return; vid.dataset.th = th; vid.poster = 'assets/video/' + th + '.jpg'; vid.src = 'assets/video/' + th + '.mp4'; const p = vid.play(); if (p) p.catch(() => {}); }
   const state = { level: 0, breath: null };
   function rng(seed){ let a = seed >>> 0; return () => { a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
   const R = rng(20261117);
@@ -1072,12 +1080,19 @@ const Scene = (() => {
   function resize(){ DPR = Math.min(2, devicePixelRatio || 1); W = innerWidth; H = innerHeight; cv.width = W * DPR; cv.height = H * DPR; }
   const useGL = th => realistic && typeof GLScenes !== 'undefined' && GLScenes && GLScenes.has(th) && GLScenes.ok(th);
   function loop(now){
-    if (!document.hidden){ const t = (now - t0) / 1000 * (reduce ? .3 : 1), g = useGL(theme);
+    const v = useVideo(theme);
+    vid.style.display = v ? 'block' : 'none'; scrim.style.display = v ? 'block' : 'none';
+    if (v){ setVideo(theme); glc.style.display = 'none'; cv.style.display = 'none'; if (vid.paused && !document.hidden){ const p = vid.play(); if (p) p.catch(() => {}); }
+      vid.style.filter = state.breath == null ? '' : 'brightness(' + (.88 + .14 * state.breath).toFixed(3) + ')'; }
+    else if (!vid.paused) vid.pause();
+    if (!document.hidden && !v){ const t = (now - t0) / 1000 * (reduce ? .3 : 1), g = useGL(theme);
       glc.style.display = g ? 'block' : 'none'; cv.style.display = g ? 'none' : 'block';
       try { if (g) GLScenes.frame(theme, t, state); else { cx.setTransform(DPR, 0, 0, DPR, 0, 0); (scenes[theme] || scenes.clasico)(cx, W, H, t, state); } } catch(e){ console.error(e); } }
     requestAnimationFrame(loop);
   }
   function preview(canvas, th){ const d = Math.min(2, devicePixelRatio || 1), w = canvas.clientWidth || 160, h = canvas.clientHeight || 100; canvas.width = w * d; canvas.height = h * d;
+    if (useVideo(th)){ const img = new Image(); img.onload = () => { const c = canvas.getContext('2d'), s = Math.max(canvas.width / img.width, canvas.height / img.height);
+        c.drawImage(img, (canvas.width - img.width * s) / 2, (canvas.height - img.height * s) / 2, img.width * s, img.height * s); }; img.src = 'assets/video/' + th + '.jpg'; return; }
     if (useGL(th) && GLScenes.snapshot(th, canvas, 14.2)) return;
     const c = canvas.getContext('2d'); c.setTransform(d, 0, 0, d, 0, 0); (scenes[th] || scenes.clasico)(c, w, h, 14.2, { level: .05, breath: null }); }
   return { state, preview, set theme(v){ theme = v; }, set realistic(v){ realistic = !!v; }, glOK: () => typeof GLScenes !== 'undefined' && !!GLScenes,
