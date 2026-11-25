@@ -203,6 +203,7 @@ body:not([data-theme=clasico]) .dock{margin-top:0}
       </div>
       <div class="fx" id="fxRow"><label for="fx">Efecto</label><input type="range" id="fx" min="0" max=".85" step=".01"><output id="fxO"></output></div>
     </div>
+    <button class="link" id="endBtn" hidden style="margin-top:12px;font-size:13px;color:rgba(255,255,255,.7);text-decoration:underline;text-underline-offset:3px">Terminar sesión y empezar de cero</button>
     <a class="scroll-hint" href="#sesion">Sesión y ajustes <span aria-hidden="true">↓</span></a>
     </div>
   </section>
@@ -1224,7 +1225,7 @@ let ctx = null, running = false, tickTimer = null, uiTimer = null, wakeLock = nu
 let spatialPan, panDepth, master, fade, comp, analyser, musicIn, filter, revSend, reverb, amGain, lfo, lfoDepth, breathGain, musicOut, natureOut, NB = null;
 let noises = {}, bin = null, cur = null, T = null, sec = null;
 let clock = {};
-let pomo = null, trackStart = 0, lastArc = 0, bpm = 60, startedAt = 0, endAt = 0, lastLive = 0, breathT0 = 0;
+let paused = false, pausedAt = 0, pomo = null, trackStart = 0, lastArc = 0, bpm = 60, startedAt = 0, endAt = 0, lastLive = 0, breathT0 = 0;
 const IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
 function makeIR(c, sec, decay){
@@ -1499,12 +1500,37 @@ async function start(p){
   startTrack(p, (Math.random()*2**32) >>> 0); setBinaural(S.binaural); applyParams(true); startThemeSound();
   tickTimer = setInterval(tick, 150); tick(); uiTimer = setInterval(updateRemain, 500);
   try { navigator.wakeLock && (wakeLock = await navigator.wakeLock.request('screen')); } catch(e){}
-  try { navigator.mediaSession.setActionHandler('pause', () => stop()); navigator.mediaSession.setActionHandler('play', () => S.profile && start(S.profile));
+  try { navigator.mediaSession.setActionHandler('pause', () => pause()); navigator.mediaSession.setActionHandler('play', () => paused ? resume() : S.profile && start(S.profile));
         navigator.mediaSession.setActionHandler('nexttrack', () => nextTrack()); } catch(e){}
   await ctx.resume(); setPlayUI();
 }
+/* Pausa: congela el audio tal cual (misma pista, mismo punto, mismo tiempo restante) hasta que recargues la página */
+function pause(){
+  if (!ctx || !running) return;
+  const c = ctx, t = c.currentTime;
+  clearInterval(tickTimer); clearInterval(uiTimer);
+  fade.gain.cancelScheduledValues(t); fade.gain.setValueAtTime(fade.gain.value, t); fade.gain.linearRampToValueAtTime(0, t + .4);
+  setTimeout(() => { if (paused && ctx === c) c.suspend().catch(() => {}); }, 450);
+  running = false; paused = true; pausedAt = Date.now();
+  try { wakeLock && wakeLock.release(); } catch(e){} wakeLock = null;
+  setPlayUI(); updateRemain();
+}
+async function resume(){
+  if (!ctx || !paused) return;
+  const d = Date.now() - pausedAt;
+  startedAt += d; trackStart += d; if (endAt) endAt += d; if (pomo) pomo.until += d;
+  paused = false; running = true;
+  try { await ctx.resume(); } catch(e){}
+  const t = ctx.currentTime; tick.fading = false;
+  fade.gain.cancelScheduledValues(t); fade.gain.setValueAtTime(0, t); fade.gain.linearRampToValueAtTime(1, t + 1.5);
+  tickTimer = setInterval(tick, 150); tick(); uiTimer = setInterval(updateRemain, 500);
+  try { navigator.wakeLock && (wakeLock = await navigator.wakeLock.request('screen')); } catch(e){}
+  setPlayUI();
+}
 function stop(secs = 2.5){
   if (!ctx) return;
+  if (paused){ try { ctx.resume(); } catch(e){} secs = .05; }
+  paused = false;
   const c = ctx, t = c.currentTime;
   clearInterval(tickTimer); clearInterval(uiTimer);
   fade.gain.cancelScheduledValues(t); fade.gain.setValueAtTime(fade.gain.value, t); fade.gain.linearRampToValueAtTime(0, t + secs);
@@ -1614,7 +1640,8 @@ function pomoSwitch(){
   if (pomo.phase === 'focus'){ pomo.phase = 'break'; pomo.until = Date.now() + 5*60000; startTrack({ ...S.profile, activity:'relajar' }, (Math.random()*2**32) >>> 0); }
   else { pomo.phase = 'focus'; pomo.round++; pomo.until = Date.now() + 25*60000; startTrack(S.profile, (Math.random()*2**32) >>> 0); }
 }
-function nextTrack(p){ if (!S.profile && !p) return openQuestions(); if (p){ S.profile = p; save(); }
+async function nextTrack(p){ if (!S.profile && !p) return openQuestions(); if (p){ S.profile = p; save(); }
+  if (paused) await resume();
   if (running) startTrack(S.profile, (Math.random()*2**32) >>> 0); else start(S.profile); }
 
 /* ---------- Interfaz ---------- */
@@ -1653,17 +1680,20 @@ function syncSliders(){
 function setPlayUI(){
   $('#play').innerHTML = running ? '<svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1.2"/><rect x="14" y="5" width="4" height="14" rx="1.2"/></svg>'
                                  : '<svg viewBox="0 0 24 24" width="28" height="28" fill="currentColor"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></svg>';
-  $('#play').setAttribute('aria-label', running ? 'Pausar' : 'Empezar');
-  ['#next','#like','#dislike'].forEach(id => $(id).disabled = !running && id !== '#next');
-  if (!running){ $('#orbMain').textContent = 'Sosiego'; $('#orbSub').textContent = S.profile ? profileText(S.profile) : 'toca Empezar'; }
+  $('#play').setAttribute('aria-label', running ? 'Pausar' : paused ? 'Seguir' : 'Empezar');
+  ['#next','#like','#dislike'].forEach(id => $(id).disabled = !running && !paused && id !== '#next');
+  $('#endBtn').hidden = !paused;
+  if (paused){ $('#orbMain').textContent = 'En pausa'; $('#orbSub').textContent = 'toca ▶ para seguir'; }
+  else if (!running){ $('#orbMain').textContent = 'Sosiego'; $('#orbSub').textContent = S.profile ? profileText(S.profile) : 'toca Empezar'; }
 }
 function updateRemain(){
-  if (!running){ $('#remain').textContent = ''; return; }
-  if (pomo){ const s = Math.max(0, Math.round((pomo.until - Date.now())/1000));
-    $('#remain').textContent = (pomo.phase === 'focus' ? 'enfoque ' + pomo.round : 'descanso') + ' · ' + String(Math.floor(s/60)).padStart(2,'0') + ':' + String(s%60).padStart(2,'0'); return; }
-  if (!endAt){ $('#remain').textContent = 'sin límite'; return; }
-  const s = Math.max(0, Math.round((endAt - Date.now())/1000));
-  $('#remain').textContent = 'quedan ' + String(Math.floor(s/60)).padStart(2,'0') + ':' + String(s%60).padStart(2,'0');
+  if (!running && !paused){ $('#remain').textContent = ''; return; }
+  const now = paused ? pausedAt : Date.now(), pre = paused ? 'en pausa · ' : '';
+  if (pomo){ const s = Math.max(0, Math.round((pomo.until - now)/1000));
+    $('#remain').textContent = pre + (pomo.phase === 'focus' ? 'enfoque ' + pomo.round : 'descanso') + ' · ' + String(Math.floor(s/60)).padStart(2,'0') + ':' + String(s%60).padStart(2,'0'); return; }
+  if (!endAt){ $('#remain').textContent = pre + 'sin límite'; return; }
+  const s = Math.max(0, Math.round((endAt - now)/1000));
+  $('#remain').textContent = pre + 'quedan ' + String(Math.floor(s/60)).padStart(2,'0') + ':' + String(s%60).padStart(2,'0');
 }
 function updateRhythmInfo(){
   const hr = hrNow();
@@ -1698,7 +1728,7 @@ function answer(id, k){
   if (qIdx + 1 < qs.length){ qIdx++; renderQ(); return; }
   $('#modal').classList.remove('open'); finish({ ...qAns });
 }
-async function finish(p){ try { if (running) nextTrack(p); else await start(p); } catch(e){ console.error(e); $('#orbSub').textContent = 'no se pudo iniciar el audio'; } }
+async function finish(p){ try { if (running || paused) await nextTrack(p); else await start(p); } catch(e){ console.error(e); $('#orbSub').textContent = 'no se pudo iniciar el audio'; } }
 $('#repeat').addEventListener('click', () => { $('#modal').classList.remove('open'); finish({ ...S.profile }); });
 $('#qBack').addEventListener('click', () => { if (qIdx){ qIdx--; renderQ(); } });
 $('#qClose').addEventListener('click', () => $('#modal').classList.remove('open'));
@@ -1713,7 +1743,8 @@ $('#whyLink').addEventListener('click', () => openHelp('why'));
 $('#helpClose').addEventListener('click', () => $('#help').classList.remove('open'));
 $('#help').addEventListener('click', e => { if (e.target.id === 'help') $('#help').classList.remove('open'); });
 $$('.tabs button').forEach(b => b.addEventListener('click', () => openHelp(b.dataset.tab)));
-$('#play').addEventListener('click', () => running ? stop() : openQuestions());
+$('#play').addEventListener('click', () => running ? pause() : paused ? resume() : openQuestions());
+$('#endBtn').addEventListener('click', () => stop(.3));
 $('#ask').addEventListener('click', openQuestions);
 $('#next').addEventListener('click', () => nextTrack());
 function rate(delta){
@@ -1723,7 +1754,7 @@ function rate(delta){
 }
 $('#like').addEventListener('click', () => rate(1));
 $('#dislike').addEventListener('click', () => rate(-1));
-$$('#dur button').forEach(b => b.addEventListener('click', () => { S.minutes = +b.dataset.min; save(); markDur(); if (running){ setTimer(); tick.fading = false; fade.gain.cancelScheduledValues(ctx.currentTime); fade.gain.setTargetAtTime(1, ctx.currentTime, .5); } }));
+$$('#dur button').forEach(b => b.addEventListener('click', () => { S.minutes = +b.dataset.min; save(); markDur(); if (running){ setTimer(); tick.fading = false; fade.gain.cancelScheduledValues(ctx.currentTime); fade.gain.setTargetAtTime(1, ctx.currentTime, .5); } else if (paused){ setTimer(); pausedAt = Date.now(); updateRemain(); } }));
 function markDur(){ $$('#dur button').forEach(b => b.setAttribute('aria-pressed', +b.dataset.min === S.minutes)); }
 [['vol','volume'],['music','music'],['noiseVol','noiseVol'],['natureVol','natureVol'],['amDepth','amDepth'],['fx','amDepth'],['amRate','amRate']].forEach(([id, key]) =>
   $('#' + id).addEventListener('input', e => { S[key] = +e.target.value; syncSliders(); applyParams(); if (key === 'volume') save(); }));
