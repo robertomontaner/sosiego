@@ -1265,7 +1265,7 @@ async function initAudio(){
   master = ctx.createGain(); fade = ctx.createGain(); comp = ctx.createDynamicsCompressor(); analyser = ctx.createAnalyser(); analyser.fftSize = 512;
   eqLow = ctx.createBiquadFilter(); eqLow.type = 'lowshelf'; eqLow.frequency.value = 180;
   eqHigh = ctx.createBiquadFilter(); eqHigh.type = 'highshelf'; eqHigh.frequency.value = 5500;
-  master.connect(eqLow); eqLow.connect(eqHigh); eqHigh.connect(fade); fade.connect(comp); comp.connect(analyser);
+  master.connect(fade); fade.connect(comp); comp.connect(analyser);
   let out = ctx.destination;
   if (IOS){ try { const d = ctx.createMediaStreamDestination(), el = $('#keep'); el.srcObject = d.stream; await el.play(); out = d; } catch(e){ out = ctx.destination; } }
   comp.connect(out);
@@ -1279,7 +1279,7 @@ async function initAudio(){
   musicIn.connect(filter); filter.connect(amGain); filter.connect(revSend); revSend.connect(reverb); reverb.connect(amGain);
   amGain.connect(breathGain);
   spatialPan = ctx.createStereoPanner(); const panLfo = ctx.createOscillator(); panLfo.frequency.value = .045; panDepth = ctx.createGain(); panDepth.gain.value = 0;
-  panLfo.connect(panDepth); panDepth.connect(spatialPan.pan); panLfo.start(); breathGain.connect(spatialPan); spatialPan.connect(musicOut); musicOut.connect(master); natureOut.connect(master);
+  panLfo.connect(panDepth); panDepth.connect(spatialPan.pan); panLfo.start(); breathGain.connect(spatialPan); spatialPan.connect(musicOut); musicOut.connect(eqLow); eqLow.connect(eqHigh); eqHigh.connect(master); natureOut.connect(master); // la EQ del beta solo toca la música, no el ruido
   noises = {};
   ['brown','pink','white'].forEach(t => {
     const src = ctx.createBufferSource(); src.buffer = NB[t]; src.loop = true;
