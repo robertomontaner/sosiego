@@ -234,6 +234,7 @@ body:not([data-theme=clasico]) .dock{margin-top:0}
         <select id="noiseType"><option value="none">Ninguno</option><option value="brown">Marrón (grave)</option><option value="pink">Rosa</option><option value="white">Blanco</option></select><span></span></div>
       <div class="field"><label for="amDepth">Modulación: intensidad</label><input type="range" id="amDepth" min="0" max=".85" step=".01"><output id="amDepthO"></output></div>
       <div class="field"><label for="amRate">Modulación: velocidad</label><input type="range" id="amRate" min="4" max="24" step="1"><output id="amRateO"></output></div>
+      <label class="check"><input type="checkbox" id="hq"><span><b>Sonido mejorado (beta)</b>: instrumentos más ricos, mezcla más cálida, reverberación más natural y ambientes con más detalle. <span class="note">La modulación no cambia. Desactívalo para volver al sonido de siempre.</span></span></label>
       <label class="check"><input type="checkbox" id="spatial"><span>Movimiento espacial: el sonido gira despacio a tu alrededor <span class="note">(mejor con auriculares)</span></span></label>
       <label class="check"><input type="checkbox" id="binaural"><span>Añadir tono binaural <span class="note">(solo con auriculares; la evidencia es mixta)</span></span></label>
       <p class="note" style="margin-bottom:0">Cada pista nueva vuelve a poner los valores que encajan con tus respuestas. La modulación empieza suave y sube en los primeros minutos. Si te cansa, bájala: no funciona igual para todo el mundo.</p>
@@ -1148,8 +1149,8 @@ const MODE_LABEL = { focus:'Enfoque', calm:'Calma', sleep:'Dormir' };
 const PALETTES = ['calido','cristal','naturaleza','electronico'];
 
 /* ---------- Estado ---------- */
-const PERSIST = ['volume','minutes','binaural','timeAdapt','hrManual','profile','likes','spatial','task','recent','theme','themeSound','themeVol','realistic'];
-const S = { realistic:true, theme:'planetario', themeSound:true, themeVol:.5, recent:[], spatial:true, task:'', volume:.7, minutes:45, binaural:false, timeAdapt:true, hrManual:null, hrLive:null, profile:null,
+const PERSIST = ['hq','volume','minutes','binaural','timeAdapt','hrManual','profile','likes','spatial','task','recent','theme','themeSound','themeVol','realistic'];
+const S = { hq:false, realistic:true, theme:'planetario', themeSound:true, themeVol:.5, recent:[], spatial:true, task:'', volume:.7, minutes:45, binaural:false, timeAdapt:true, hrManual:null, hrLive:null, profile:null,
             likes:{ calido:0, cristal:0, naturaleza:0, electronico:0 },
             amRate:16, amDepth:.5, noise:'brown', noiseVol:.2, music:.85, natureVol:.8, cutoff:1800 };
 try { const sv = JSON.parse(localStorage.getItem('sosiego2') || '{}'); PERSIST.forEach(k => { if (k in sv) S[k] = sv[k]; }); } catch(e){}
@@ -1222,7 +1223,7 @@ function makeTrack(p, seed){
 
 /* ---------- Motor de audio ---------- */
 let ctx = null, running = false, tickTimer = null, uiTimer = null, wakeLock = null;
-let spatialPan, panDepth, master, fade, comp, analyser, musicIn, filter, revSend, reverb, amGain, lfo, lfoDepth, breathGain, musicOut, natureOut, NB = null;
+let eqLow, eqHigh, IR1, IR2, spatialPan, panDepth, master, fade, comp, analyser, musicIn, filter, revSend, reverb, amGain, lfo, lfoDepth, breathGain, musicOut, natureOut, NB = null;
 let noises = {}, bin = null, cur = null, T = null, sec = null;
 let clock = {};
 let paused = false, pausedAt = 0, pomo = null, trackStart = 0, lastArc = 0, bpm = 60, startedAt = 0, endAt = 0, lastLive = 0, breathT0 = 0;
@@ -1231,6 +1232,15 @@ const IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform ==
 function makeIR(c, sec, decay){
   const n = c.sampleRate * sec | 0, b = c.createBuffer(2, n, c.sampleRate);
   for (let ch = 0; ch < 2; ch++){ const d = b.getChannelData(ch); for (let i = 0; i < n; i++) d[i] = (Math.random()*2-1) * Math.pow(1 - i/n, decay); }
+  return b;
+}
+// Reverb «mejorada»: primeras reflexiones + cola que se oscurece con el tiempo, estéreo decorrelado
+function makeIR2(c, sec){
+  const n = c.sampleRate * sec | 0, b = c.createBuffer(2, n, c.sampleRate), sr = c.sampleRate;
+  for (let ch = 0; ch < 2; ch++){ const d = b.getChannelData(ch); let lp = 0;
+    for (let i = 0; i < n; i++){ const k = i / n, a = .15 + .8 * k; lp = lp * a + (Math.random()*2 - 1) * (1 - a); d[i] = lp * Math.pow(1 - k, 2.2) * (1.6 + k * 2); }
+    [.011, .019, .027, .037, .049, .061, .077].forEach((tt, j) => { const p = (tt + (ch ? .003 : 0)) * sr | 0; if (p < n) d[p] += (j % 2 ? -1 : 1) * (.5 - j * .055); });
+  }
   return b;
 }
 function makeNoise(c, type){
@@ -1253,14 +1263,16 @@ async function initAudio(){
   const AC = window.AudioContext || window.webkitAudioContext;
   ctx = new AC({ latencyHint:'playback' });
   master = ctx.createGain(); fade = ctx.createGain(); comp = ctx.createDynamicsCompressor(); analyser = ctx.createAnalyser(); analyser.fftSize = 512;
-  master.connect(fade); fade.connect(comp); comp.connect(analyser);
+  eqLow = ctx.createBiquadFilter(); eqLow.type = 'lowshelf'; eqLow.frequency.value = 180;
+  eqHigh = ctx.createBiquadFilter(); eqHigh.type = 'highshelf'; eqHigh.frequency.value = 5500;
+  master.connect(eqLow); eqLow.connect(eqHigh); eqHigh.connect(fade); fade.connect(comp); comp.connect(analyser);
   let out = ctx.destination;
   if (IOS){ try { const d = ctx.createMediaStreamDestination(), el = $('#keep'); el.srcObject = d.stream; await el.play(); out = d; } catch(e){ out = ctx.destination; } }
   comp.connect(out);
   NB = { brown:makeNoise(ctx,'brown'), pink:makeNoise(ctx,'pink'), white:makeNoise(ctx,'white') };
   // música: entrada -> filtro -> (seco + reverb) -> modulación -> respiración -> salida
   musicIn = ctx.createGain(); filter = ctx.createBiquadFilter(); filter.type = 'lowpass'; filter.Q.value = .5;
-  reverb = ctx.createConvolver(); reverb.buffer = makeIR(ctx, 5, 2.4); revSend = ctx.createGain(); revSend.gain.value = .5;
+  IR1 = makeIR(ctx, 5, 2.4); IR2 = makeIR2(ctx, 4.5); reverb = ctx.createConvolver(); reverb.buffer = S.hq ? IR2 : IR1; revSend = ctx.createGain(); revSend.gain.value = .5;
   amGain = ctx.createGain(); breathGain = ctx.createGain(); musicOut = ctx.createGain(); natureOut = ctx.createGain();
   // Modulación fija e independiente del ritmo de la música: no alinearla con el tempo ni ajustarla con sensores (ver nota de patentes en el README)
   lfo = ctx.createOscillator(); lfo.type = 'sine'; lfoDepth = ctx.createGain(); lfo.connect(lfoDepth); lfoDepth.connect(amGain.gain); lfo.start();
@@ -1282,6 +1294,11 @@ function arc(){
   const el = (Date.now() - trackStart) / 1000; let a = Math.min(1, .35 + .65 * el / 150);
   const end = pomo ? pomo.until : endAt; if (end){ const left = (end - Date.now()) / 1000; if (left < 120) a *= Math.max(.25, left / 120); }
   return a;
+}
+function applyHQ(){
+  if (!ctx) return; const t = ctx.currentTime;
+  eqLow.gain.setTargetAtTime(S.hq ? 1.5 : 0, t, .3); eqHigh.gain.setTargetAtTime(S.hq ? -3 : 0, t, .3);
+  const want = S.hq ? IR2 : IR1; if (reverb.buffer !== want) reverb.buffer = want;
 }
 function applyParams(instant){
   if (!ctx) return;
@@ -1313,7 +1330,48 @@ function setBinaural(on){
 
 /* ---------- Instrumentos ---------- */
 function panned(dest, pan){ const p = ctx.createStereoPanner(); p.pan.value = pan; p.connect(dest); return p; }
+/* ---- Instrumentos «Sonido mejorado (beta)» ---- */
+function padHQ(t, notes, dur, timbre, dest){
+  const att = Math.min(6, dur*.35), rel = Math.min(10, dur*.6 + 3);
+  const layers = timbre === 'glass' ? [['sine',0,.02,0],['sine',1200,.0035,.55],['sine',1203,.0035,-.55]]
+               : [['sawtooth',-9,.0042,-.6],['sawtooth',9,.0042,.6],['triangle',0,.011,0],['sine',-3,.008,0]];
+  notes.forEach((m, i) => {
+    const f = ctx.createBiquadFilter(), base = Math.min(3200, Math.max(600, midi(m)*4.5)); f.type = 'lowpass'; f.Q.value = .3;
+    f.frequency.setValueAtTime(base*.7, t); f.frequency.linearRampToValueAtTime(base*1.35, t + dur*.5); f.frequency.linearRampToValueAtTime(base*.8, t + dur + rel);
+    f.connect(dest);
+    layers.forEach(([type, det, pk, pan]) => {
+      const o = ctx.createOscillator(), g = ctx.createGain(); o.type = type; o.frequency.value = midi(m); o.detune.value = det + rnd(-2.5, 2.5); pk *= i === 0 ? 1.2 : 1;
+      g.gain.setValueAtTime(0, t); g.gain.setTargetAtTime(pk, t + i*.3, att/3); g.gain.setTargetAtTime(0, t + dur, rel/4);
+      o.connect(g); g.connect(pan ? panned(f, pan) : f); o.start(t); o.stop(t + dur + rel + .5);
+    });
+  });
+}
+function keysHQ(t, m, v, dest){ // piano eléctrico FM con «púa» metálica suave
+  const f = midi(m), c = ctx.createOscillator(), m1 = ctx.createOscillator(), m2 = ctx.createOscillator(), g1 = ctx.createGain(), g2 = ctx.createGain(), g = ctx.createGain(), lp = ctx.createBiquadFilter();
+  c.frequency.value = f; m1.frequency.value = f; m2.frequency.value = f*14;
+  g1.gain.setValueAtTime(f*1.8*(.7 + .3*v), t); g1.gain.setTargetAtTime(f*.15, t, .4);
+  g2.gain.setValueAtTime(f*.8, t); g2.gain.setTargetAtTime(0, t, .03);
+  m1.connect(g1); g1.connect(c.frequency); m2.connect(g2); g2.connect(c.frequency);
+  lp.type = 'lowpass'; lp.frequency.value = 4500; c.connect(lp); lp.connect(g); g.connect(panned(dest, clamp((m - 66)/30, -.5, .5)));
+  const pk = .042*v; g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(pk, t + .004); g.gain.setTargetAtTime(pk*.55, t + .01, .15); g.gain.setTargetAtTime(0, t + .3, 1.1);
+  [c, m1, m2].forEach(o => { o.start(t); o.stop(t + 6); });
+}
+function bellHQ(t, m, v, dest){ // campana con parciales inarmónicos
+  const f = midi(m), p = panned(dest, rnd(-.6, .6)), lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 6000; lp.connect(p);
+  [[1, 1, 1.6], [2.76, .35, .8], [5.4, .15, .4], [8.93, .06, .2]].forEach(([r, a, d]) => {
+    const o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.value = f*r;
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.04*v*a, t + .005); g.gain.setTargetAtTime(0, t + .006, d);
+    o.connect(g); g.connect(lp); o.start(t); o.stop(t + d*6 + .5);
+  });
+}
+function pluckHQ(t, m, v, dest){
+  const lp = ctx.createBiquadFilter(), g = ctx.createGain(); lp.type = 'lowpass'; lp.Q.value = .5;
+  lp.frequency.setValueAtTime(1500, t); lp.frequency.setTargetAtTime(320, t, .08); lp.connect(g); g.connect(panned(dest, rnd(-.4, .4)));
+  [['sawtooth', -6], ['triangle', 6]].forEach(([type, det]) => { const o = ctx.createOscillator(); o.type = type; o.frequency.value = midi(m); o.detune.value = det; o.connect(lp); o.start(t); o.stop(t + 1.6); });
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.014*v, t + .008); g.gain.setTargetAtTime(0, t + .01, .2);
+}
 function pad(t, notes, dur, timbre, dest){
+  if (S.hq) return padHQ(t, notes, dur, timbre, dest);
   const att = Math.min(6, dur*.35), rel = Math.min(10, dur*.6 + 3);
   const layers = timbre === 'warm' ? [['sawtooth',-7,.006],['sawtooth',7,.006],['sine',0,.016]]
                : timbre === 'glass' ? [['sine',0,.022],['sine',1200,.005]]
@@ -1327,6 +1385,7 @@ function pad(t, notes, dur, timbre, dest){
   }));
 }
 function keys(t, m, v, dest){ // piano eléctrico por FM
+  if (S.hq) return keysHQ(t, m, v, dest);
   const f = midi(m), c = ctx.createOscillator(), mo = ctx.createOscillator(), mg = ctx.createGain(), g = ctx.createGain();
   c.frequency.value = f; mo.frequency.value = f; mg.gain.setValueAtTime(f*2, t); mg.gain.setTargetAtTime(f*.2, t, .3);
   mo.connect(mg); mg.connect(c.frequency); c.connect(g); g.connect(panned(dest, rnd(-.5, .5)));
@@ -1341,6 +1400,7 @@ function marimba(t, m, v, dest){
   o.start(t); o2.start(t); o.stop(t + 2.5); o2.stop(t + 2.5);
 }
 function pluck(t, m, v, dest){
+  if (S.hq) return pluckHQ(t, m, v, dest);
   const o = ctx.createOscillator(), lp = ctx.createBiquadFilter(), g = ctx.createGain();
   o.type = 'sawtooth'; o.frequency.value = midi(m); lp.type = 'lowpass'; lp.Q.value = .9;
   lp.frequency.setValueAtTime(1700, t); lp.frequency.setTargetAtTime(350, t, .06);
@@ -1348,6 +1408,7 @@ function pluck(t, m, v, dest){
   o.connect(lp); lp.connect(g); g.connect(panned(dest, rnd(-.4, .4))); o.start(t); o.stop(t + 1.5);
 }
 function bell(t, m, v, dest){
+  if (S.hq) return bellHQ(t, m, v, dest);
   const f = midi(m), o = ctx.createOscillator(), o2 = ctx.createOscillator(), g = ctx.createGain(), g2 = ctx.createGain();
   o.frequency.value = f; o2.frequency.value = f*2.001; g2.gain.value = .22; o2.connect(g2); g2.connect(g); o.connect(g); g.connect(panned(dest, rnd(-.6, .6)));
   g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.045*v, t + .02); g.gain.setTargetAtTime(0, t + .02, 1.2);
@@ -1497,7 +1558,7 @@ async function start(p){
   await initAudio();
   const t = ctx.currentTime; fade.gain.setValueAtTime(0, t); fade.gain.linearRampToValueAtTime(1, t + 4);
   running = true; startedAt = Date.now(); setTimer();
-  startTrack(p, (Math.random()*2**32) >>> 0); setBinaural(S.binaural); applyParams(true); startThemeSound();
+  startTrack(p, (Math.random()*2**32) >>> 0); setBinaural(S.binaural); applyParams(true); applyHQ(); startThemeSound();
   tickTimer = setInterval(tick, 150); tick(); uiTimer = setInterval(updateRemain, 500);
   try { navigator.wakeLock && (wakeLock = await navigator.wakeLock.request('screen')); } catch(e){}
   try { navigator.mediaSession.setActionHandler('pause', () => pause()); navigator.mediaSession.setActionHandler('play', () => paused ? resume() : S.profile && start(S.profile));
@@ -1560,12 +1621,18 @@ function startThemeSound(){
   if (kind === 'agua'){ const a = loop('brown', 'lowpass', 380, .7, .75); const l = ctx.createOscillator(); l.frequency.value = .07; const lg = ctx.createGain(); lg.gain.value = 120; l.connect(lg); lg.connect(a.fl.frequency); l.start(); nodes.push(l); }
   if (kind === 'tren'){ loop('brown', 'lowpass', 160, .7, .8); loop('pink', 'bandpass', 700, 1.2, .05); }
   let wind = null;
+  if (S.hq && (kind === 'fuego' || kind === 'fogata')) wind = loop('brown', 'bandpass', 300, .7, .3); // rugido del fuego que respira
   if (kind === 'coche'){ const r = loop('pink', 'lowpass', 3200, .6, .5); const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 350; r.g.disconnect(); r.g.connect(hp); hp.connect(out); loop('brown', 'lowpass', 110, .7, .3); }
   if (kind === 'aire'){ wind = loop('pink', 'bandpass', 450, .9, .55); }
   if (kind === 'bosque'){ wind = loop('pink', 'bandpass', 350, .8, .3); const lv = loop('pink', 'highpass', 2200, .7, .12); const l = ctx.createOscillator(); l.frequency.value = .13; const lg = ctx.createGain(); lg.gain.value = .07; l.connect(lg); lg.connect(lv.g.gain); l.start(); nodes.push(l); }
   themeNodes = nodes; themeEv = { kind, out, wind, next: ctx.currentTime + .5, nextWind: 0 };
 }
 function crackle(t, dest){
+  if (S.hq && Math.random() < .12){ // siseo de resina
+    const s = ctx.createBufferSource(), bp = ctx.createBiquadFilter(), g = ctx.createGain(); s.buffer = NB.white; bp.type = 'bandpass'; bp.frequency.value = rnd(2500, 4500); bp.Q.value = 1.5;
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(rnd(.01, .025), t + .03); g.gain.setTargetAtTime(0, t + rnd(.1, .3), .08);
+    s.connect(bp); bp.connect(g); g.connect(panned(dest, rnd(-.5, .5))); s.start(t, rnd(0, 7), .8);
+  }
   const s = ctx.createBufferSource(), bp = ctx.createBiquadFilter(), g = ctx.createGain(), pop = Math.random() < .12;
   s.buffer = NB.white; bp.type = 'bandpass'; bp.frequency.value = pop ? rnd(300, 700) : rnd(1500, 5000); bp.Q.value = 3;
   g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(rnd(.03, .12) * (pop ? 2.2 : 1), t + .002); g.gain.setTargetAtTime(0, t + .003, pop ? .03 : rnd(.004, .015));
@@ -1584,6 +1651,11 @@ function clack(t, dest, v = 1){
   o.connect(og); og.connect(dest); o.start(t); o.stop(t + .5);
 }
 function roofTick(t, dest){ // gota en el techo del coche
+  if (S.hq && Math.random() < .15){ // gota gruesa
+    const s = ctx.createBufferSource(), bp = ctx.createBiquadFilter(), g = ctx.createGain(); s.buffer = NB.white; bp.type = 'bandpass'; bp.frequency.value = rnd(600, 1300); bp.Q.value = 3;
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(rnd(.03, .07), t + .003); g.gain.setTargetAtTime(0, t + .004, .03);
+    s.connect(bp); bp.connect(g); g.connect(panned(dest, rnd(-.8, .8))); s.start(t, rnd(0, 7), .2); return;
+  }
   const s = ctx.createBufferSource(), bp = ctx.createBiquadFilter(), g = ctx.createGain(); s.buffer = NB.white; bp.type = 'bandpass'; bp.frequency.value = rnd(1800, 5500); bp.Q.value = 2.5;
   g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(rnd(.01, .045), t + .002); g.gain.setTargetAtTime(0, t + .003, .012);
   s.connect(bp); bp.connect(g); g.connect(panned(dest, rnd(-.8, .8))); s.start(t, rnd(0, 7), .1);
@@ -1671,7 +1743,7 @@ function syncSliders(){
   $('#vol').value = S.volume; $('#music').value = S.music; $('#noiseVol').value = S.noiseVol; $('#natureVol').value = S.natureVol;
   $('#noiseType').value = S.noise; $('#amDepth').value = S.amDepth; $('#fx').value = S.amDepth;
   $('#fxO').textContent = S.amDepth ? Math.round(S.amDepth/.85*100) + '%' : 'apagado'; $('#amRate').value = S.amRate;
-  $('#binaural').checked = S.binaural; $('#timeAdapt').checked = S.timeAdapt; $('#spatial').checked = S.spatial; $('#taskIn').value = S.task || '';
+  $('#binaural').checked = S.binaural; $('#timeAdapt').checked = S.timeAdapt; $('#spatial').checked = S.spatial; $('#hq').checked = S.hq; $('#taskIn').value = S.task || '';
   const pc = v => Math.round(v*100) + '%', band = r => r < 8 ? 'theta' : r < 13 ? 'alfa' : 'beta';
   $('#volO').textContent = pc(S.volume); $('#musicO').textContent = pc(S.music); $('#noiseVolO').textContent = pc(S.noiseVol/.6); $('#natureVolO').textContent = pc(S.natureVol);
   $('#amDepthO').textContent = S.amDepth ? pc(S.amDepth/.85) : 'apagada'; $('#amRateO').textContent = S.amRate + ' Hz · ' + band(S.amRate);
@@ -1759,6 +1831,7 @@ function markDur(){ $$('#dur button').forEach(b => b.setAttribute('aria-pressed'
 [['vol','volume'],['music','music'],['noiseVol','noiseVol'],['natureVol','natureVol'],['amDepth','amDepth'],['fx','amDepth'],['amRate','amRate']].forEach(([id, key]) =>
   $('#' + id).addEventListener('input', e => { S[key] = +e.target.value; syncSliders(); applyParams(); if (key === 'volume') save(); }));
 $('#noiseType').addEventListener('change', e => { S.noise = e.target.value; if (S.noise !== 'none' && S.noiseVol < .05){ S.noiseVol = .15; syncSliders(); } applyParams(); });
+$('#hq').addEventListener('change', e => { S.hq = e.target.checked; save(); applyHQ(); if (running) startThemeSound(); });
 $('#spatial').addEventListener('change', e => { S.spatial = e.target.checked; save(); applyParams(); });
 $('#taskIn').addEventListener('input', e => { S.task = e.target.value.trim(); save(); if (T) showTrack(); });
 $('#binaural').addEventListener('change', e => { S.binaural = e.target.checked; save(); setBinaural(S.binaural); });

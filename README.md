@@ -27,6 +27,9 @@ Al pulsar **Empezar**, Sosiego te hace 3 o 4 preguntas rápidas y genera una pis
 - **Movimiento espacial**: el sonido gira lentamente a tu alrededor (muy leve en Enfoque).
 - **Calma**: guía de respiración 4–6 (inhala 4 s, exhala 6 s); al meditar, respiración cuadrada 4–4–4–4.
 
+### Sonido mejorado (beta)
+Opción en *Ajustes del sonido*, desactivada por defecto: pads con barrido de filtro y estéreo, piano eléctrico FM con «púa» metálica, campanas con parciales inarmónicos, EQ más cálida (+1,5 dB graves, −3 dB agudos), reverberación con primeras reflexiones y ambientes con más detalle. **La modulación no cambia.** La versión sin estos cambios está guardada en la rama `estable-2026-11-25`.
+
 ### Sesión
 - **Pomodoro 25/5**: 25 min de enfoque y 5 de descanso con sonido de calma, avisos con campanas, en bucle.
 - Duraciones fijas con fundido final, o sin límite. Campo opcional para escribir en qué te vas a centrar.
